@@ -1,6 +1,7 @@
 // CO2301 Path-Finding.cpp: A program using the TL-Engine
 
 #include <TL-Engine.h>	// TL-Engine include file and namespace
+#include "PathFinder.h" // path finder class
 using namespace tle;
 
 void main()
@@ -13,7 +14,7 @@ void main()
 	pMyEngine->AddMediaFolder("C:\\ProgramData\\TL-Engine\\Media");
 
 	/**** Set up your scene here ****/
-
+	CPathFinder* pCMyPathFinder = new CPathFinder;
 
 	// The main game loop, repeat until engine is stopped
 	while (pMyEngine->IsRunning())
