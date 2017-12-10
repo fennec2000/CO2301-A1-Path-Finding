@@ -68,3 +68,17 @@ void CPathFinder::LoadMap(string givenMapName)
 		myMap.close();
 	}
 }
+
+void CPathFinder::DisplayMap()
+{
+	vector<vector<int>>::iterator row;
+	vector<int>::iterator col;
+	for (row = mMap.begin(); row != mMap.end(); row++)
+	{
+		for (col = row->begin(); col != row->end(); col++)
+		{
+			cout << *col;
+		}
+		cout << endl;
+	}
+}

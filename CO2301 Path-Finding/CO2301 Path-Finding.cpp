@@ -15,6 +15,7 @@ void main()
 
 	/**** Set up your scene here ****/
 	CPathFinder* pCMyPathFinder = new CPathFinder;
+	pCMyPathFinder->DisplayMap();
 
 	// The main game loop, repeat until engine is stopped
 	while (pMyEngine->IsRunning())
