@@ -61,8 +61,9 @@ void CPathFinder::LoadMap(string givenMapName)
 		{
 			for (int i = 0; i < inputString.length(); ++i)
 			{
-				tmp.push_back(stoi(to_string(inputString[i])));
+				tmp.push_back(inputString[i] - '0');
 			}
+			mMap.push_back(tmp);
 			tmp.clear();
 		}
 		myMap.close();
@@ -71,14 +72,21 @@ void CPathFinder::LoadMap(string givenMapName)
 
 void CPathFinder::DisplayMap()
 {
+	cout << "Display start" << endl;
 	vector<vector<int>>::iterator row;
 	vector<int>::iterator col;
 	for (row = mMap.begin(); row != mMap.end(); row++)
 	{
 		for (col = row->begin(); col != row->end(); col++)
 		{
-			cout << *col;
+			cout << to_string(*col);
 		}
 		cout << endl;
 	}
+	cout << "Display end" << endl;
+}
+
+void CPathFinder::SolveAStar()
+{
+
 }

@@ -16,8 +16,9 @@ private:
 	pair<int, int> mEnd;		// ending point / goal
 
 	// private func
-	void LoadCoords(string givenMapName);	//Loads coords
-	void LoadMap(string givenMapName);		//Loads map
+	void LoadCoords(string givenMapName);	// Loads coords
+	void LoadMap(string givenMapName);		// Loads map
+	void SolveAStar();						// Solve the current map
 
 public:
 	CPathFinder();		// constructor
@@ -25,6 +26,6 @@ public:
 
 	void Load(string mapName);	// Loads the named map
 
-	void DisplayMap();	// used to display the map to console for debugging // Only works for square maps
+	void DisplayMap();	// used to display the map to console for debugging
 };
 
