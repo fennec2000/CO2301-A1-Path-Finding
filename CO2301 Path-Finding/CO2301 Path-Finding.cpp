@@ -27,5 +27,6 @@ void main()
 	}
 
 	// Delete the 3D engine now we are finished with it
+	delete pCMyPathFinder;
 	pMyEngine->Delete();
 }

@@ -14,6 +14,7 @@ CPathFinder::CPathFinder()
 
 CPathFinder::~CPathFinder()
 {
+
 }
 
 void CPathFinder::Load(string mapName)
@@ -107,12 +108,12 @@ void CPathFinder::DisplayMap()
 
 void CPathFinder::SolveAStar()
 {
-	std::deque <std::unique_ptr <coords>> openList, closedList;
-	std::unique_ptr <coords> current(new coords), tmp(new coords);
+	deque <unique_ptr <coords>> openList, closedList;
+	unique_ptr <coords> current(new coords), tmp(new coords);
 
 	// put the start into open list
 	current->location = mStart;
-	current->manhattanDist = mEnd.first - mStart.first + mEnd.second - mStart.second;
+	current->manhattanDist = CalcManDist(mStart);
 	current->runningDist = 0;
 	current->parent = new coords;
 	current->parent = 0;
@@ -165,7 +166,7 @@ void CPathFinder::SolveAStar()
 
 
 #ifdef DEBUG
-			cout << "tmp: x: " << tmp->location.first << ", y: " << tmp->location.second << ". Parent: " << tmp->parent << endl;
+			cout << "tmp: x: " << tmp->location.first << ", y: " << tmp->location.second << ". Parent: " << tmp->parent << " ";
 #endif // DEBUG
 
 			// is valid?
@@ -182,10 +183,48 @@ void CPathFinder::SolveAStar()
 			}
 
 			// calc manhattan dist
+			tmp->manhattanDist = CalcManDist(tmp->location);
+#ifdef DEBUG
+			cout << "manDist: " << tmp->manhattanDist << " ";
+#endif // DEBUG
+
 			// calc running dist
+			tmp->runningDist = CalcRunDist(tmp);
+#ifdef DEBUG
+			cout << "runDist: " << tmp->runningDist << " ";
+#endif // DEBUG
+
 			// push to openList
-			// push current to closedList
+			// is in open list?
+			// yes - it is better?
+
 			// sort openList
+
+			// push current to closedList
+
+#ifdef DEBUG // neaten the debug output
+			cout << endl;
+#endif // DEBUG
 		}
 	}
+}
+
+int CPathFinder::CalcManDist(pair<int, int> Loc)
+{
+	return abs(mEnd.first - Loc.first) + abs(mEnd.second - Loc.second);
+}
+
+int CPathFinder::CalcRunDist(unique_ptr <coords>& givenPoint)
+{
+	return givenPoint->parent->runningDist + mMap[givenPoint->location.first][givenPoint->location.second];
+}
+
+bool Find(deque<unique_ptr<coords>>& myList, pair<int, int> Loc)
+{
+	for (auto it = myList.begin(); it != myList.end(); ++it)
+	{
+		if ((*it)->location.first == Loc.first && (*it)->location.second == Loc.second)
+			return true;
+	}
+	return false;
 }

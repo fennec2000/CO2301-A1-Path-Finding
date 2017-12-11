@@ -39,6 +39,7 @@ private:
 	void LoadMap(string givenMapName);		// Loads map
 	void SolveAStar();						// Solve the current map
 	int CalcManDist(pair<int, int> Loc);	// Calc manhattan distance
+	int CPathFinder::CalcRunDist(unique_ptr <coords>& givenPoint);	// Calc current distance from start
 
 public:
 	CPathFinder();		// constructor
