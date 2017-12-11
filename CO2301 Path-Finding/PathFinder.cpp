@@ -1,10 +1,17 @@
 #include "PathFinder.h"
 
+bool CompareCoords(unique_ptr<coords>& lhs, unique_ptr<coords>& rhs)
+{
+	return lhs->manhattanDist + lhs->runningDist < rhs->manhattanDist + rhs->runningDist;
+}
+
 CPathFinder::CPathFinder()
 {
 	Load("d");
 
 #ifdef DEBUG
+	cout << "Start: x: " << mStart.first << " y: " << mStart.second << endl;
+	cout << "End: x: " << mEnd.first << " y: " << mEnd.second << endl;
 	DisplayMap();
 #endif // _DEBUG
 
@@ -108,6 +115,7 @@ void CPathFinder::DisplayMap()
 
 void CPathFinder::SolveAStar()
 {
+	bool found = false;
 	deque <unique_ptr <coords>> openList, closedList;
 	unique_ptr <coords> current(new coords), tmp(new coords);
 
@@ -121,14 +129,16 @@ void CPathFinder::SolveAStar()
 	current.reset(new coords);
 
 	// while !openList.empty
-	while (!openList.empty())
+	while (!openList.empty() && !found)
 	{
 		// pick best option (first)
 		current = move(openList.front());
 		openList.pop_front();
 #ifdef DEBUG
 		cout << "Moved front of openList to current" << endl;
-		cout << "current: x: " << current->location.first << ", y: " << current->location.first << endl;
+		cout << "current: x: " << current->location.first << ", y: " << current->location.second << " ";
+		cout << "ManDist: " << current->manhattanDist << " runDist: " << current->runningDist;
+		cout << endl;
 #endif // DEBUG
 
 
@@ -136,6 +146,11 @@ void CPathFinder::SolveAStar()
 		if (current->location == mEnd)
 		{
 			// goal found
+#ifdef DEBUG
+			cout << endl << "***End found***" << endl;
+#endif // DEBUG
+
+			found = true;
 			break;
 		}
 
@@ -179,6 +194,12 @@ void CPathFinder::SolveAStar()
 			// is goal?
 			if (tmp->location.first == mEnd.first && tmp->location.second == mEnd.second)
 			{
+
+#ifdef DEBUG
+				cout << endl << "***End found***" << endl;
+#endif // DEBUG
+
+				found = true;
 				break; // goal found
 			}
 
@@ -212,6 +233,10 @@ void CPathFinder::SolveAStar()
 			}
 			// reset tmp
 			tmp.reset(new coords);
+
+#ifdef DEBUG // neaten the debug output
+			cout << endl;
+#endif // DEBUG
 		}
 		// sort openList
 		sort(openList.begin(), openList.end(), CompareCoords);
@@ -257,9 +282,4 @@ void CPathFinder::SwapFirstWithCheck(deque<unique_ptr<coords>>& myList, unique_p
 			return;
 		}
 	}
-}
-
-bool CPathFinder::CompareCoords(unique_ptr<coords>& lhs, unique_ptr<coords>& rhs)
-{
-	return lhs->manhattanDist + lhs->runningDist < rhs->manhattanDist + rhs->runningDist;
 }
