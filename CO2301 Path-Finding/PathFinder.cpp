@@ -195,17 +195,34 @@ void CPathFinder::SolveAStar()
 #endif // DEBUG
 
 			// push to openList
-			// is in open list?
-			// yes - it is better?
+			// check closed list
+			if (!Find(closedList, tmp->location))
+			{
+				// is in open list?
+				if (Find(openList, tmp->location))
+				{
+					// yes - it is better?
+					SwapFirstWithCheck(openList, tmp);
+				}
+				else
+				{
+					// no add it
+					openList.push_back(move(tmp));
+				}
+			}
+			// reset tmp
+			tmp.reset(new coords);
+		}
+		// sort openList
+		sort(openList.begin(), openList.end(), CompareCoords);
 
-			// sort openList
-
-			// push current to closedList
+		// push current to closedList
+		closedList.push_back(move(current));
+		current.reset(new coords);
 
 #ifdef DEBUG // neaten the debug output
-			cout << endl;
+		cout << endl;
 #endif // DEBUG
-		}
 	}
 }
 
@@ -219,7 +236,7 @@ int CPathFinder::CalcRunDist(unique_ptr <coords>& givenPoint)
 	return givenPoint->parent->runningDist + mMap[givenPoint->location.first][givenPoint->location.second];
 }
 
-bool Find(deque<unique_ptr<coords>>& myList, pair<int, int> Loc)
+bool CPathFinder::Find(deque<unique_ptr<coords>>& myList, pair<int, int> Loc)
 {
 	for (auto it = myList.begin(); it != myList.end(); ++it)
 	{
@@ -227,4 +244,22 @@ bool Find(deque<unique_ptr<coords>>& myList, pair<int, int> Loc)
 			return true;
 	}
 	return false;
+}
+
+void CPathFinder::SwapFirstWithCheck(deque<unique_ptr<coords>>& myList, unique_ptr <coords>& givenPoint)
+{
+	for (auto it = myList.begin(); it != myList.end(); ++it)
+	{
+		if ((*it)->location.first == givenPoint->location.first && (*it)->location.second == givenPoint->location.second &&
+			CompareCoords(givenPoint, *it))
+		{
+			givenPoint.swap(*it);
+			return;
+		}
+	}
+}
+
+bool CPathFinder::CompareCoords(unique_ptr<coords>& lhs, unique_ptr<coords>& rhs)
+{
+	return lhs->manhattanDist + lhs->runningDist < rhs->manhattanDist + rhs->runningDist;
 }
