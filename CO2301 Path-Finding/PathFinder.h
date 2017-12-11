@@ -10,9 +10,11 @@
 #include <deque>	// deque
 using namespace std;
 
+#define DEBUG
+
 enum dirrection
 {
-	North = 0, East, South, West
+	North = 0, East, South, West, NumberOfDirections
 };
 
 struct coords
@@ -21,7 +23,7 @@ struct coords
 	int manhattanDist;			// the manhattan distance to the goal
 	int runningDist;			// distance from the starting point
 
-	coords* parent;				// 
+	coords* parent;				// previous node
 };
 
 class CPathFinder
@@ -30,6 +32,7 @@ private:
 	vector<vector<int>> mMap;	// the current map
 	pair<int, int> mStart;		// starting point
 	pair<int, int> mEnd;		// ending point / goal
+	pair<int, int> mMapSize;	// the size of the map as a rectangle
 
 	// private func
 	void LoadCoords(string givenMapName);	// Loads coords

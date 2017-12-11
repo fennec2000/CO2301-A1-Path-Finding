@@ -3,6 +3,12 @@
 CPathFinder::CPathFinder()
 {
 	Load("d");
+
+#ifdef DEBUG
+	DisplayMap();
+#endif // _DEBUG
+
+	SolveAStar();
 }
 
 
@@ -52,22 +58,35 @@ void CPathFinder::LoadMap(string givenMapName)
 {
 	vector<int> tmp;
 	string inputString;
+	int longestRow = 0;
 
 	ifstream myMap("maps/" + givenMapName + "Map.txt"); // all map files are in the maps folder and must follow convention
 
 	if (myMap.is_open())
 	{
+		// for each line
 		while (getline(myMap, inputString))
 		{
+			// get each char
 			for (int i = 0; i < inputString.length(); ++i)
 			{
 				tmp.push_back(inputString[i] - '0');
 			}
+
+			// track longest row
+			if (inputString.length() > longestRow)
+			{
+				longestRow = inputString.length();
+			}
+
 			mMap.push_back(tmp);
 			tmp.clear();
 		}
 		myMap.close();
 	}
+	// set the map size
+	mMapSize.first = longestRow;
+	mMapSize.second = mMap.size();
 }
 
 void CPathFinder::DisplayMap()
@@ -89,22 +108,28 @@ void CPathFinder::DisplayMap()
 void CPathFinder::SolveAStar()
 {
 	std::deque <std::unique_ptr <coords>> openList, closedList;
-	std::unique_ptr <coords> current(new coords);
+	std::unique_ptr <coords> current(new coords), tmp(new coords);
 
 	// put the start into open list
 	current->location = mStart;
 	current->manhattanDist = mEnd.first - mStart.first + mEnd.second - mStart.second;
 	current->runningDist = 0;
+	current->parent = new coords;
 	current->parent = 0;
 	openList.push_back(move(current));
 	current.reset(new coords);
 
 	// while !openList.empty
-	while (!openList.empty)
+	while (!openList.empty())
 	{
 		// pick best option (first)
-		current = move(openList.front);
+		current = move(openList.front());
 		openList.pop_front();
+#ifdef DEBUG
+		cout << "Moved front of openList to current" << endl;
+		cout << "current: x: " << current->location.first << ", y: " << current->location.first << endl;
+#endif // DEBUG
+
 
 		// is goal?
 		if (current->location == mEnd)
@@ -114,14 +139,53 @@ void CPathFinder::SolveAStar()
 		}
 
 		// check arround
+		for (int i = 0; i < dirrection::NumberOfDirections; ++i)
+		{
+			// set tmp's similar variables
+			tmp->location = current->location;
+			tmp->parent = current.get();
+
+			switch (i)
+			{
+			case dirrection::North:
+				++(tmp->location.second);
+				break;
+			case dirrection::East:
+				++(tmp->location.first);
+				break;
+			case dirrection::South:
+				--(tmp->location.second);
+				break;
+			case dirrection::West:
+				--(tmp->location.first);
+				break;
+			default:
+				break;
+			}
 
 
-		// is goal?
-		// calc manhattan dist
-		// calc running dist
-		// push to openList
-		// push current to closedList
-		// sort openList
+#ifdef DEBUG
+			cout << "tmp: x: " << tmp->location.first << ", y: " << tmp->location.second << ". Parent: " << tmp->parent << endl;
+#endif // DEBUG
+
+			// is valid?
+			if (tmp->location.first < 0 || tmp->location.first >= mMapSize.first ||
+				tmp->location.second < 0 || tmp->location.second >= mMapSize.second)
+			{
+				continue; // cout of bounds go to next itt
+			}
+
+			// is goal?
+			if (tmp->location.first == mEnd.first && tmp->location.second == mEnd.second)
+			{
+				break; // goal found
+			}
+
+			// calc manhattan dist
+			// calc running dist
+			// push to openList
+			// push current to closedList
+			// sort openList
+		}
 	}
-
 }
