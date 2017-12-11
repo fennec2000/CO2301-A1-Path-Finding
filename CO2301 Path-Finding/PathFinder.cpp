@@ -88,5 +88,40 @@ void CPathFinder::DisplayMap()
 
 void CPathFinder::SolveAStar()
 {
+	std::deque <std::unique_ptr <coords>> openList, closedList;
+	std::unique_ptr <coords> current(new coords);
+
+	// put the start into open list
+	current->location = mStart;
+	current->manhattanDist = mEnd.first - mStart.first + mEnd.second - mStart.second;
+	current->runningDist = 0;
+	current->parent = 0;
+	openList.push_back(move(current));
+	current.reset(new coords);
+
+	// while !openList.empty
+	while (!openList.empty)
+	{
+		// pick best option (first)
+		current = move(openList.front);
+		openList.pop_front();
+
+		// is goal?
+		if (current->location == mEnd)
+		{
+			// goal found
+			break;
+		}
+
+		// check arround
+
+
+		// is goal?
+		// calc manhattan dist
+		// calc running dist
+		// push to openList
+		// push current to closedList
+		// sort openList
+	}
 
 }
