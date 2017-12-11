@@ -35,6 +35,8 @@ private:
 	pair<int, int> mEnd;		// ending point / goal
 	pair<int, int> mMapSize;	// the size of the map as a rectangle
 
+	int NumOfSorts;		// counts the number of sorts
+
 	// private func
 	void LoadCoords(string givenMapName);	// Loads coords
 	void LoadMap(string givenMapName);		// Loads map
@@ -44,7 +46,7 @@ private:
 	void DisplayMap();									// used to display the map to console for debugging
 	bool Find(deque<unique_ptr<coords>>& myList, pair<int, int> Loc);	// find is location is already in list
 	void SwapFirstWithCheck(deque<unique_ptr<coords>>& myList, unique_ptr <coords>& givenPoint);	// swap the given point with the first match in the list
-
+	void DisplayList(deque<unique_ptr<coords>>& myList);	// Display the given list in the console
 
 public:
 	CPathFinder();		// constructor

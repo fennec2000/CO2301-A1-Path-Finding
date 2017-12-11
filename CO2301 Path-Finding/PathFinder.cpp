@@ -7,6 +7,7 @@ bool CompareCoords(unique_ptr<coords>& lhs, unique_ptr<coords>& rhs)
 
 CPathFinder::CPathFinder()
 {
+	NumOfSorts = 0;
 	Load("d");
 
 #ifdef DEBUG
@@ -147,7 +148,7 @@ void CPathFinder::SolveAStar()
 		{
 			// goal found
 #ifdef DEBUG
-			cout << endl << "***End found***" << endl;
+			cout << endl << "***End found Hard***" << endl;
 #endif // DEBUG
 
 			found = true;
@@ -240,6 +241,7 @@ void CPathFinder::SolveAStar()
 		}
 		// sort openList
 		sort(openList.begin(), openList.end(), CompareCoords);
+		++NumOfSorts;
 
 		// push current to closedList
 		closedList.push_back(move(current));
@@ -247,8 +249,17 @@ void CPathFinder::SolveAStar()
 
 #ifdef DEBUG // neaten the debug output
 		cout << endl;
+
 #endif // DEBUG
 	}
+	//TODO output to txt file
+#ifdef DEBUG // neaten the debug output
+	cout << "Number of sorts: " << NumOfSorts <<  endl;
+	cout << "openList: " << endl;
+	DisplayList(openList);
+	cout << "closedList: " << endl;
+	DisplayList(closedList);
+#endif // DEBUG
 }
 
 int CPathFinder::CalcManDist(pair<int, int> Loc)
@@ -256,6 +267,7 @@ int CPathFinder::CalcManDist(pair<int, int> Loc)
 	return abs(mEnd.first - Loc.first) + abs(mEnd.second - Loc.second);
 }
 
+//TODO add the floor weights
 int CPathFinder::CalcRunDist(unique_ptr <coords>& givenPoint)
 {
 	return givenPoint->parent->runningDist + mMap[givenPoint->location.first][givenPoint->location.second];
@@ -281,5 +293,13 @@ void CPathFinder::SwapFirstWithCheck(deque<unique_ptr<coords>>& myList, unique_p
 			givenPoint.swap(*it);
 			return;
 		}
+	}
+}
+
+void CPathFinder::DisplayList(deque<unique_ptr<coords>>& myList)
+{
+	for (auto it = myList.begin(); it != myList.end(); ++it)
+	{
+		std::cout << "x: " << (*it)->location.first << ", " << (*it)->location.second << ", manDist: " << (*it)->manhattanDist << " runDist: " << (*it)->runningDist << endl;
 	}
 }
