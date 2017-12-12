@@ -13,6 +13,7 @@ CPathFinder::CPathFinder()
 #ifdef DEBUG
 	cout << "Start: x: " << mStart.first << " y: " << mStart.second << endl;
 	cout << "End: x: " << mEnd.first << " y: " << mEnd.second << endl;
+	cout << "Maps size: " << mMapSize.first << "x" << mMapSize.second << endl;
 	DisplayMap();
 #endif // _DEBUG
 
@@ -158,6 +159,9 @@ void CPathFinder::SolveAStar()
 		// check arround
 		for (int i = 0; i < dirrection::NumberOfDirections; ++i)
 		{
+			// reset tmp // start with a new tmp
+			tmp.reset(new coords);
+
 			// set tmp's similar variables
 			tmp->location = current->location;
 			tmp->parent = current.get();
@@ -204,16 +208,22 @@ void CPathFinder::SolveAStar()
 				break; // goal found
 			}
 
-			// calc manhattan dist
-			tmp->manhattanDist = CalcManDist(tmp->location);
-#ifdef DEBUG
-			cout << "manDist: " << tmp->manhattanDist << " ";
-#endif // DEBUG
-
+			
+			if (!mMap[tmp->location.first][tmp->location.second])
+			{
+				// tile on map is wall do not add
+				continue;
+			}
 			// calc running dist
 			tmp->runningDist = CalcRunDist(tmp);
 #ifdef DEBUG
 			cout << "runDist: " << tmp->runningDist << " ";
+#endif // DEBUG
+
+			// calc manhattan dist
+			tmp->manhattanDist = CalcManDist(tmp->location);
+#ifdef DEBUG
+			cout << "manDist: " << tmp->manhattanDist << " ";
 #endif // DEBUG
 
 			// push to openList
@@ -232,8 +242,6 @@ void CPathFinder::SolveAStar()
 					openList.push_back(move(tmp));
 				}
 			}
-			// reset tmp
-			tmp.reset(new coords);
 
 #ifdef DEBUG // neaten the debug output
 			cout << endl;
@@ -267,7 +275,6 @@ int CPathFinder::CalcManDist(pair<int, int> Loc)
 	return abs(mEnd.first - Loc.first) + abs(mEnd.second - Loc.second);
 }
 
-//TODO add the floor weights
 int CPathFinder::CalcRunDist(unique_ptr <coords>& givenPoint)
 {
 	return givenPoint->parent->runningDist + mMap[givenPoint->location.first][givenPoint->location.second];
