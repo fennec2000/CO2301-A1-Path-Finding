@@ -119,7 +119,7 @@ void CPathFinder::SolveAStar()
 {
 	bool found = false;
 	deque <unique_ptr <coords>> openList, closedList;
-	unique_ptr <coords> current(new coords), tmp(new coords);
+	unique_ptr <coords> current(new coords), tmp(new coords), goal(new coords);
 
 	// put the start into open list
 	current->location = mStart;
@@ -152,6 +152,7 @@ void CPathFinder::SolveAStar()
 			cout << endl << "***End found Hard***" << endl;
 #endif // DEBUG
 
+			goal = move(current);
 			found = true;
 			break;
 		}
@@ -204,6 +205,7 @@ void CPathFinder::SolveAStar()
 				cout << endl << "***End found***" << endl;
 #endif // DEBUG
 
+				goal = move(tmp);
 				found = true;
 				break; // goal found
 			}
@@ -261,6 +263,12 @@ void CPathFinder::SolveAStar()
 #endif // DEBUG
 	}
 	//TODO output to txt file
+	// Get a list from end to start
+	ReturnPath(goal);
+	// flip the list
+	// print to xOutput.txt
+
+	// output info to xStats.txt
 #ifdef DEBUG // neaten the debug output
 	cout << "Number of sorts: " << NumOfSorts <<  endl;
 	cout << "openList: " << endl;
@@ -308,5 +316,21 @@ void CPathFinder::DisplayList(deque<unique_ptr<coords>>& myList)
 	for (auto it = myList.begin(); it != myList.end(); ++it)
 	{
 		std::cout << "x: " << (*it)->location.first << ", " << (*it)->location.second << ", manDist: " << (*it)->manhattanDist << " runDist: " << (*it)->runningDist << endl;
+	}
+}
+
+void CPathFinder::ReturnPath(unique_ptr <coords>& givenPoint)
+{
+	coords* current;
+
+	// put the first path into mPath
+	mPath.push_back(current->location);
+	current = current->parent;
+
+	// loop till parent = 0
+	while (current->parent)
+	{
+		mPath.push_back(current->location);
+		current = current->parent;
 	}
 }

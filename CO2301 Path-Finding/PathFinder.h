@@ -30,10 +30,11 @@ struct coords
 class CPathFinder
 {
 private:
-	vector<vector<int>> mMap;	// the current map
-	pair<int, int> mStart;		// starting point
-	pair<int, int> mEnd;		// ending point / goal
-	pair<int, int> mMapSize;	// the size of the map as a rectangle
+	vector<vector<int>> mMap;		// the current map
+	pair<int, int> mStart;			// starting point
+	pair<int, int> mEnd;			// ending point / goal
+	pair<int, int> mMapSize;		// the size of the map as a rectangle
+	vector<pair<int, int>> mPath;	// path from start to end
 
 	int NumOfSorts;		// counts the number of sorts
 
@@ -47,6 +48,7 @@ private:
 	bool Find(deque<unique_ptr<coords>>& myList, pair<int, int> Loc);	// find is location is already in list
 	void SwapFirstWithCheck(deque<unique_ptr<coords>>& myList, unique_ptr <coords>& givenPoint);	// swap the given point with the first match in the list
 	void DisplayList(deque<unique_ptr<coords>>& myList);	// Display the given list in the console
+	void ReturnPath(unique_ptr <coords>& givenPoint);		// Puts the path from givenPoint to start into mPath
 
 public:
 	CPathFinder();		// constructor
