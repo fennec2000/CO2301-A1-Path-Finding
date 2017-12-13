@@ -4,7 +4,7 @@
 #include <fstream>		// ifstream
 #include <string>		// string getline
 #include <sstream>		// stringstream
-#include <iostream>		// cout
+#include <iostream>		// std::cout
 #include <iterator>		// istream_iterator
 #include <memory>		// unique_ptr
 #include <deque>		// deque
@@ -36,7 +36,10 @@ private:
 	pair<int, int> mMapSize;		// the size of the map as a rectangle
 	vector<pair<int, int>> mPath;	// path from start to end
 
-	int NumOfSorts;		// counts the number of sorts
+	int NumOfSorts;			// counts the number of sorts
+	int NumOfNodesVisited;	// counts the number of nodes visited
+	int NumOfNodesSeen;		// counts the number of nodes seen
+	string fileName;		// name of the file // the prefix e.g. d - dMaps.txt, dCoords.txt, dOutput.txt, dStats.txt
 
 	// private func
 	void LoadCoords(string givenMapName);	// Loads coords
@@ -49,9 +52,10 @@ private:
 	void SwapFirstWithCheck(deque<unique_ptr<coords>>& myList, unique_ptr <coords>& givenPoint);	// swap the given point with the first match in the list
 	void DisplayList(deque<unique_ptr<coords>>& myList);	// Display the given list in the console
 	void ReturnPath(unique_ptr <coords>& givenPoint);		// Puts the path from givenPoint to start into mPath
+	void CPathFinder::WriteResult();		// Write the restlts to files xOutput.txt and xStats.txt x = filename
 
 public:
-	CPathFinder();		// constructor
+	CPathFinder(string givenFileName);		// constructor
 	~CPathFinder();		// deconstructor
 
 	void Load(string mapName);	// Loads the named map

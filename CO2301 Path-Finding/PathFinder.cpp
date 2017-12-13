@@ -5,15 +5,21 @@ bool CompareCoords(unique_ptr<coords>& lhs, unique_ptr<coords>& rhs)
 	return lhs->manhattanDist + lhs->runningDist < rhs->manhattanDist + rhs->runningDist;
 }
 
-CPathFinder::CPathFinder()
+CPathFinder::CPathFinder(string givenFileName)
 {
+	// Reset the stats
 	NumOfSorts = 0;
-	Load("d");
+	NumOfNodesVisited = 0;
+	NumOfNodesSeen = 0;
+
+	fileName = givenFileName;
+	Load(fileName);
+	reverse(mMap.begin(), mMap.end());
 
 #ifdef DEBUG
-	cout << "Start: x: " << mStart.first << " y: " << mStart.second << endl;
-	cout << "End: x: " << mEnd.first << " y: " << mEnd.second << endl;
-	cout << "Maps size: " << mMapSize.first << "x" << mMapSize.second << endl;
+	std::cout << "Start: x: " << mStart.first << " y: " << mStart.second << endl;
+	std::cout << "End: x: " << mEnd.first << " y: " << mEnd.second << endl;
+	std::cout << "Maps size: " << mMapSize.first << "x" << mMapSize.second << endl;
 	DisplayMap();
 #endif // _DEBUG
 
@@ -101,18 +107,18 @@ void CPathFinder::LoadMap(string givenMapName)
 
 void CPathFinder::DisplayMap()
 {
-	cout << "Display start" << endl;
+	std::cout << "Display start" << endl;
 	vector<vector<int>>::iterator row;
 	vector<int>::iterator col;
 	for (row = mMap.begin(); row != mMap.end(); row++)
 	{
 		for (col = row->begin(); col != row->end(); col++)
 		{
-			cout << to_string(*col);
+			std::cout << to_string(*col);
 		}
-		cout << endl;
+		std::cout << endl;
 	}
-	cout << "Display end" << endl;
+	std::cout << "Display end" << endl;
 }
 
 void CPathFinder::SolveAStar()
@@ -137,19 +143,22 @@ void CPathFinder::SolveAStar()
 		current = move(openList.front());
 		openList.pop_front();
 #ifdef DEBUG
-		cout << "Moved front of openList to current" << endl;
-		cout << "current: x: " << current->location.first << ", y: " << current->location.second << " ";
-		cout << "ManDist: " << current->manhattanDist << " runDist: " << current->runningDist;
-		cout << endl;
+		std::cout << "Moved front of openList to current" << endl;
+		std::cout << "current: x: " << current->location.first << ", y: " << current->location.second << " ";
+		std::cout << "ManDist: " << current->manhattanDist << " runDist: " << current->runningDist << " ";
+		std::cout << "Tile: " << mMap[current->location.second][current->location.first] << " ";
+		std::cout << endl;
 #endif // DEBUG
 
+		// count node has visited
+		++NumOfNodesVisited;
 
 		// is goal?
-		if (current->location == mEnd)
+		if (current->location.first == mEnd.first && current->location.second == mEnd.second)
 		{
 			// goal found
 #ifdef DEBUG
-			cout << endl << "***End found Hard***" << endl;
+			std::cout << endl << "***End found Hard***" << endl;
 #endif // DEBUG
 
 			goal = move(current);
@@ -187,22 +196,29 @@ void CPathFinder::SolveAStar()
 
 
 #ifdef DEBUG
-			cout << "tmp: x: " << tmp->location.first << ", y: " << tmp->location.second << ". Parent: " << tmp->parent << " ";
+			std::cout << "tmp: x: " << tmp->location.first << ", y: " << tmp->location.second << ". Parent: " << tmp->parent << " ";
+			std::cout << "Tile: " << mMap[tmp->location.second][tmp->location.first] << " ";
 #endif // DEBUG
 
 			// is valid?
 			if (tmp->location.first < 0 || tmp->location.first >= mMapSize.first ||
 				tmp->location.second < 0 || tmp->location.second >= mMapSize.second)
 			{
-				continue; // cout of bounds go to next itt
+#ifdef DEBUG
+				std::cout << "Tile out of bounds" << endl;
+#endif // DEBUG
+				continue; // std::cout of bounds go to next itt
 			}
+
+			// valid node so we see it
+			++NumOfNodesSeen;
 
 			// is goal?
 			if (tmp->location.first == mEnd.first && tmp->location.second == mEnd.second)
 			{
 
 #ifdef DEBUG
-				cout << endl << "***End found***" << endl;
+				std::cout << endl << "***End found***" << endl;
 #endif // DEBUG
 
 				goal = move(tmp);
@@ -211,21 +227,24 @@ void CPathFinder::SolveAStar()
 			}
 
 			
-			if (!mMap[tmp->location.first][tmp->location.second])
+			if (!mMap[tmp->location.second][tmp->location.first])
 			{
 				// tile on map is wall do not add
+#ifdef DEBUG
+				std::cout << "Tile is a wall" << endl;
+#endif // DEBUG
 				continue;
 			}
 			// calc running dist
 			tmp->runningDist = CalcRunDist(tmp);
 #ifdef DEBUG
-			cout << "runDist: " << tmp->runningDist << " ";
+			std::cout << "runDist: " << tmp->runningDist << " ";
 #endif // DEBUG
 
 			// calc manhattan dist
 			tmp->manhattanDist = CalcManDist(tmp->location);
 #ifdef DEBUG
-			cout << "manDist: " << tmp->manhattanDist << " ";
+			std::cout << "manDist: " << tmp->manhattanDist << " ";
 #endif // DEBUG
 
 			// push to openList
@@ -246,7 +265,7 @@ void CPathFinder::SolveAStar()
 			}
 
 #ifdef DEBUG // neaten the debug output
-			cout << endl;
+			std::cout << endl;
 #endif // DEBUG
 		}
 		// sort openList
@@ -258,22 +277,23 @@ void CPathFinder::SolveAStar()
 		current.reset(new coords);
 
 #ifdef DEBUG // neaten the debug output
-		cout << endl;
+		std::cout << endl;
 
 #endif // DEBUG
 	}
-	//TODO output to txt file
 	// Get a list from end to start
 	ReturnPath(goal);
 	// flip the list
+	reverse(mPath.begin(), mPath.end());
 	// print to xOutput.txt
+	WriteResult();
 
 	// output info to xStats.txt
 #ifdef DEBUG // neaten the debug output
-	cout << "Number of sorts: " << NumOfSorts <<  endl;
-	cout << "openList: " << endl;
+	std::cout << "Number of sorts: " << NumOfSorts <<  endl;
+	std::cout << "openList: " << endl;
 	DisplayList(openList);
-	cout << "closedList: " << endl;
+	std::cout << "closedList: " << endl;
 	DisplayList(closedList);
 #endif // DEBUG
 }
@@ -285,7 +305,7 @@ int CPathFinder::CalcManDist(pair<int, int> Loc)
 
 int CPathFinder::CalcRunDist(unique_ptr <coords>& givenPoint)
 {
-	return givenPoint->parent->runningDist + mMap[givenPoint->location.first][givenPoint->location.second];
+	return givenPoint->parent->runningDist + mMap[givenPoint->location.second][givenPoint->location.first];
 }
 
 bool CPathFinder::Find(deque<unique_ptr<coords>>& myList, pair<int, int> Loc)
@@ -315,7 +335,8 @@ void CPathFinder::DisplayList(deque<unique_ptr<coords>>& myList)
 {
 	for (auto it = myList.begin(); it != myList.end(); ++it)
 	{
-		std::cout << "x: " << (*it)->location.first << ", " << (*it)->location.second << ", manDist: " << (*it)->manhattanDist << " runDist: " << (*it)->runningDist << endl;
+		std::cout << "x: " << (*it)->location.first << ", " << (*it)->location.second
+			<<", manDist: " << (*it)->manhattanDist << " runDist: " << (*it)->runningDist << endl;
 	}
 }
 
@@ -324,13 +345,31 @@ void CPathFinder::ReturnPath(unique_ptr <coords>& givenPoint)
 	coords* current;
 
 	// put the first path into mPath
-	mPath.push_back(current->location);
-	current = current->parent;
+	mPath.push_back(givenPoint->location);
+	current = givenPoint->parent;
 
 	// loop till parent = 0
-	while (current->parent)
+	while (current->parent != 0)
 	{
 		mPath.push_back(current->location);
 		current = current->parent;
 	}
+}
+
+void CPathFinder::WriteResult()
+{
+	ofstream myOutput, myStats;
+	myOutput.open("maps/" + fileName + "Output.txt", ios::trunc);
+
+	for (vector<pair<int, int>>::iterator it = mPath.begin(); it != mPath.end(); ++it)
+	{
+		myOutput << (*it).first << " " << (*it).second << endl;
+	}
+	myOutput.close();
+
+	myStats.open("maps/" + fileName + "Stats.txt", ios::trunc);
+	myStats << "Number of sorts: " << NumOfSorts << endl;
+	myStats << "Nodes visited: " << NumOfNodesVisited << endl;
+	myStats << "Nodes seen:" << NumOfNodesSeen << endl;
+	myStats.close();
 }
