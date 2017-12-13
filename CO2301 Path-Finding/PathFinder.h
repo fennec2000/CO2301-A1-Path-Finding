@@ -59,5 +59,8 @@ public:
 	~CPathFinder();		// deconstructor
 
 	void Load(string mapName);	// Loads the named map
+
+	pair<int, int> GetMapSize() { return mMapSize; };	// returns the map size
+	vector<vector<int>> GetMap() {};
 };
 
