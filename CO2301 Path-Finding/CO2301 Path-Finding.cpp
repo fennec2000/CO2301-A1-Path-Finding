@@ -35,6 +35,7 @@ void main()
 	// Meshs
 	IMesh* floorMesh = pMyEngine->LoadMesh("Floor.x");
 	IMesh* cubeMesh = pMyEngine->LoadMesh("Cube.x");
+	IMesh* mobMesh = pMyEngine->LoadMesh("sierra.x");
 
 	// Models
 	IModel* floor = floorMesh->CreateModel(0.0f, -10.0f, 0.0f);
@@ -91,13 +92,20 @@ void main()
 	// set the skin of the end
 	cubes[mapEnd.second][mapEnd.first]->SetSkin(cubeSkins[cubeTypes::end]);
 
+	// Mob
+	IModel* mob = mobMesh->CreateModel();
+	mob->Scale(cubeSize);
+	mob->SetPosition(mapStart.first * cubeSize, 0.0f, mapStart.second * cubeSize);
+
 	// myCamera
-	ICamera* myCamera = pMyEngine->CreateCamera(kFPS);
+	ICamera* myCamera = pMyEngine->CreateCamera(kManual);
+	myCamera->SetPosition(cubeSize * 4.5f, 100.0f, cubeSize * 4.5f);
+	myCamera->RotateX(90.0f);
 	myCamera->SetMovementSpeed(2.0f * MY_CAMERA_SPEED);
 	myCamera->SetRotationSpeed(MY_CAMERA_SPEED);
 
 	// hide mouse
-	pMyEngine->StartMouseCapture();
+	//pMyEngine->StartMouseCapture();
 
 	// The main game loop, repeat until engine is stopped
 	while (pMyEngine->IsRunning())
