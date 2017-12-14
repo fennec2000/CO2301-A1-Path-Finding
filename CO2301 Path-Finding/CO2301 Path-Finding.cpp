@@ -4,6 +4,8 @@
 #include "PathFinder.h" // path finder class
 using namespace tle;
 
+enum cubeTypes { wall, clear, wood, water, start, end, numOfCubeTypes };
+
 void main()
 {
 	// Create a 3D engine (using TLX engine here) and open a window for it
@@ -12,41 +14,82 @@ void main()
 
 	// Add default folder for meshes and other media
 	pMyEngine->AddMediaFolder("C:\\ProgramData\\TL-Engine\\Media");
+	pMyEngine->AddMediaFolder("media");
 
 	// Varables
+	// cubes
+	string cubeSkins[] = { "wall.jpg", "clear.jpg", "wood.jpg", "water.jpg", "start.jpg", "end.jpg" };
+	float cubeYOffset[] = { 0.0f, -5.0f, -4.5f, -5.5f };
+	float cubeSize = 10.0f;
 
 	// keybindings
 	EKeyCode buttonClose = Key_Escape; // quit key
 
-	// camera
+	// Camera
 	const int MY_CAMERA_SPEED = 10;
 
 	/**** Set up your scene here ****/
+	// Engine
 	CPathFinder* pCMyPathFinder = new CPathFinder("m");
 
-	// meshs
+	// Meshs
 	IMesh* floorMesh = pMyEngine->LoadMesh("Floor.x");
 	IMesh* cubeMesh = pMyEngine->LoadMesh("Cube.x");
 
 	// Models
-	IModel* floor = floorMesh->CreateModel();
+	IModel* floor = floorMesh->CreateModel(0.0f, -10.0f, 0.0f);
 
 	// multi vector of cubes
 	pair<int, int> mapSize = pCMyPathFinder->GetMapSize();
+	pair<int, int> mapStart = pCMyPathFinder->GetMapStart();
+	pair<int, int> mapEnd = pCMyPathFinder->GetMapEnd();
+	vector<vector<int>> map = pCMyPathFinder->GetMap();
 	vector <vector <IModel*>> cubes;
-	vector <IModel*> tmpCubes;
-
-	float cubeYOffset = -4.9f;
-	float cubeSize = 10.0f;
 
 	for (int i = 0; i < mapSize.second; ++i)
 	{
+		vector <IModel*> tmpCubes;
+
 		for (int j = 0; j < mapSize.first; ++j)
 		{
-			tmpCubes.push_back(cubeMesh->CreateModel(j * cubeSize, cubeYOffset, i * cubeSize));
+			IModel* tmpCubeModel;
+
+			switch (map[i][j])
+			{
+			case cubeTypes::wall:
+				tmpCubeModel = cubeMesh->CreateModel(j * cubeSize, cubeYOffset[cubeTypes::wall], i * cubeSize);
+				tmpCubeModel->SetSkin(cubeSkins[cubeTypes::wall]);
+				break;
+			case cubeTypes::clear:
+				tmpCubeModel = cubeMesh->CreateModel(j * cubeSize, cubeYOffset[cubeTypes::clear], i * cubeSize);
+				tmpCubeModel->SetSkin(cubeSkins[cubeTypes::clear]);
+				break;
+			case cubeTypes::wood:
+				tmpCubeModel = cubeMesh->CreateModel(j * cubeSize, cubeYOffset[cubeTypes::wood], i * cubeSize);
+				tmpCubeModel->SetSkin(cubeSkins[cubeTypes::wood]);
+				break;
+			case cubeTypes::water:
+				tmpCubeModel = cubeMesh->CreateModel(j * cubeSize, cubeYOffset[cubeTypes::water], i * cubeSize);
+				tmpCubeModel->SetSkin(cubeSkins[cubeTypes::water]);
+				break;
+			default:
+#ifdef DEBUG
+				cout << "Invalid cube type" << endl;
+#endif // DEBUG
+
+				break;
+			}
+
+			tmpCubes.push_back(tmpCubeModel);
 		}
 		cubes.push_back(tmpCubes);
 	}
+
+	// set the skin of the start
+	cubes[mapStart.second][mapStart.first]->SetSkin(cubeSkins[cubeTypes::start]);
+
+	// set the skin of the end
+	cubes[mapEnd.second][mapEnd.first]->SetSkin(cubeSkins[cubeTypes::end]);
 
 	// myCamera
 	ICamera* myCamera = pMyEngine->CreateCamera(kFPS);

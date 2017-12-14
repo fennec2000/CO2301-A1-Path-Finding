@@ -14,7 +14,6 @@ CPathFinder::CPathFinder(string givenFileName)
 
 	fileName = givenFileName;
 	Load(fileName);
-	reverse(mMap.begin(), mMap.end());
 
 #ifdef DEBUG
 	std::cout << "Start: x: " << mStart.first << " y: " << mStart.second << endl;
@@ -103,6 +102,7 @@ void CPathFinder::LoadMap(string givenMapName)
 	// set the map size
 	mMapSize.first = longestRow;
 	mMapSize.second = mMap.size();
+	reverse(mMap.begin(), mMap.end());
 }
 
 void CPathFinder::DisplayMap()
@@ -370,6 +370,6 @@ void CPathFinder::WriteResult()
 	myStats.open("maps/" + fileName + "Stats.txt", ios::trunc);
 	myStats << "Number of sorts: " << NumOfSorts << endl;
 	myStats << "Nodes visited: " << NumOfNodesVisited << endl;
-	myStats << "Nodes seen:" << NumOfNodesSeen << endl;
+	myStats << "Nodes seen: " << NumOfNodesSeen << endl;
 	myStats.close();
 }

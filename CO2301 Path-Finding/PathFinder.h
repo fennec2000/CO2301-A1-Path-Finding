@@ -61,6 +61,8 @@ public:
 	void Load(string mapName);	// Loads the named map
 
 	pair<int, int> GetMapSize() { return mMapSize; };	// returns the map size
-	vector<vector<int>> GetMap() {};
+	vector<vector<int>> GetMap() { return mMap; };		// returns the map
+	pair<int, int> GetMapStart() { return mStart; };	// returns the start
+	pair<int, int> GetMapEnd() { return mEnd; };		// returns the end
 };
 
