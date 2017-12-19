@@ -7,6 +7,10 @@
     <ClCompile Include="PathFinder.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Vec3.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Matrix4x4.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
@@ -23,5 +27,9 @@
     <ClInclude Include="PathFinder.h">
       <Filter>Header</Filter>
     </ClInclude>
+    <ClInclude Include="Vec3.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Matrix4x4.h" />
   </ItemGroup>
 </Project>

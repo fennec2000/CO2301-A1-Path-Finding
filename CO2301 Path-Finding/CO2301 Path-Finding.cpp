@@ -1,11 +1,17 @@
 // CO2301 Path-Finding.cpp: A program using the TL-Engine
+// Stuart Hayes		20363714
 
 #include <TL-Engine.h>	// TL-Engine include file and namespace
 #include "PathFinder.h" // path finder class
+#include "Vec3.h"
+#include "Matrix4x4.h"	// 4x4 matrics class
 using namespace tle;
 
 enum cubeTypes { wall, clear, wood, water, start, end, numOfCubeTypes };
 enum cubeStatus { unknown, seen, visited, numOfStatus };
+
+// declarations
+void LookAt(Vec3 targetPosition, IModel* myModel);
 
 void main()
 {
@@ -28,6 +34,8 @@ void main()
 	int currentPoint = -2;
 	vector<pair<int, int>> waypoints = pCMyPathFinder->GetPath();
 	bool displayedFoundPath = false;
+	bool guardMove = false;
+	const float EPS = std::numeric_limits<float>::epsilon();
 
 	// keybindings
 	EKeyCode buttonClose = Key_Escape;	// quit key
@@ -98,19 +106,22 @@ void main()
 		cubes.push_back(tmpCubes);
 	}
 
-	// set the skin of the start
+	// set the start
 	cubes[mapStart.second][mapStart.first]->SetSkin(cubeSkins[cubeStatus::unknown][cubeTypes::start]);
 	map[mapStart.second][mapStart.first] = cubeTypes::start;
 
-	// set the skin of the end
+	// set the end
 	cubes[mapEnd.second][mapEnd.first]->SetSkin(cubeSkins[cubeStatus::unknown][cubeTypes::end]);
 	map[mapEnd.second][mapEnd.first] = cubeTypes::end;
+
+	// mob variables
+	float mobSpeed = 3.00f;
+	pair<int, int> mobPos;
 
 	// mob
 	IModel* mob = mobMesh->CreateModel();
 	mob->Scale(cubeSize);
 	mob->SetPosition(mapStart.first * cubeSize, 0.0f, mapStart.second * cubeSize);
-
 
 	// Camera
 	const int MY_CAMERA_SPEED = 10;
@@ -148,7 +159,7 @@ void main()
 				currentWaypath = waypoints[currentPoint];
 
 			cubes[currentWaypath.second][currentWaypath.first]->SetSkin(cubeSkins[cubeStatus::visited][map[currentWaypath.second][currentWaypath.first] % cubeTypes::numOfCubeTypes]);
-			map[currentWaypath.second][currentWaypath.first] += cubeTypes::numOfCubeTypes * 2;
+			map[currentWaypath.second][currentWaypath.first] += cubeTypes::numOfCubeTypes * cubeStatus::visited;
 
 			pair<int, int> tmp;
 			for (int i = 0; i < dirrection::NumberOfDirections; ++i)
@@ -179,8 +190,10 @@ void main()
 				if (tmp == mapEnd) // found the goal
 				{
 					displayedFoundPath = true;
+					guardMove = true;
 					cubes[tmp.second][tmp.first]->SetSkin(cubeSkins[cubeStatus::visited][map[tmp.second][tmp.first] % cubeTypes::numOfCubeTypes]);
-					map[tmp.second][tmp.first] += cubeTypes::numOfCubeTypes * 2;
+					map[tmp.second][tmp.first] += cubeTypes::numOfCubeTypes * cubeStatus::visited;
+					currentPoint = 0;
 				}
 
 				// if not visited set visited
@@ -189,6 +202,25 @@ void main()
 					cubes[tmp.second][tmp.first]->SetSkin(cubeSkins[cubeStatus::seen][map[tmp.second][tmp.first] % cubeTypes::numOfCubeTypes]);
 					map[tmp.second][tmp.first] += cubeTypes::numOfCubeTypes;
 				}
+			}
+		}
+
+		if (timeLeftForNextStep < 0.0f && guardMove)
+		{
+			mobPos.first = mob->GetX();
+			mobPos.second = mob->GetZ();
+
+			//mob->LookAt(waypoints[currentPoint].first, 0.0f, waypoints[currentPoint].second);
+			LookAt(Vec3(waypoints[currentPoint].first, 0.0f, waypoints[currentPoint].second), mob);
+			mob->MoveLocalZ(mobSpeed * frameTimer);
+
+			if (mobPos.first < waypoints[currentPoint].first + EPS && mobPos.first > waypoints[currentPoint].first - EPS &&
+				mobPos.second < waypoints[currentPoint].second + EPS && mobPos.second > waypoints[currentPoint].second - EPS)
+			{
+				if (currentPoint + 1 < waypoints.size())
+					++currentPoint;
+				else
+					guardMove = false;
 			}
 		}
 
@@ -212,4 +244,33 @@ void main()
 	// Delete the 3D engine now we are finished with it
 	delete pCMyPathFinder;
 	pMyEngine->Delete();
+}
+
+void LookAt(Vec3 targetPosition, IModel* myModel)
+{
+	Vec3 myPosition(myModel->GetX(), myModel->GetY(), myModel->GetZ());
+	// Calculate matrix axes for guard
+	// Get facing (z) vector from positions
+	Vec3 vecZ = Normalise(Subtract(targetPosition, myPosition));
+	// Use cross products to get other axes
+	// Must normalise axes
+	// Use the y axis as a base
+	Vec3 vecX = Normalise(Cross(kYAxis, vecZ));
+	Vec3 vecY = Normalise(Cross(vecZ, vecX));
+
+	// Build matrix from axes + position
+	// Matrix constructor using four CVector3 variables
+	// - one for each row/column
+	// (see matrix header)
+	// Build matrix by row (axes + position)
+	Matrix4x4 myMat;
+	myMat.MakeIdentity();
+	myMat.SetRow(0, vecX);
+	myMat.SetRow(1, vecY);
+	myMat.SetRow(2, vecZ);
+	myMat.SetRow(3, myPosition);
+
+	// Set position of guard using matrix
+	myModel->SetMatrix(&myMat.e00);
+
 }
