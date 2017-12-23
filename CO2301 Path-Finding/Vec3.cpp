@@ -30,26 +30,26 @@ float Vec3::Dot(const Vec3& v)
 }
 
 // Subtracting two given vectors (order is important - non-member version
-inline Vec3 Subtract(const Vec3& v, const Vec3& w)
+Vec3 Subtract(const Vec3& v, const Vec3& w)
 {
 	return Vec3(v.x - w.x, v.y - w.y, v.z - w.z);
 }
 
 // Dot product of two given vectors (order not important) - non-member version
-inline Vec3 Cross(const Vec3& v1, const Vec3& v2)
+Vec3 Cross(const Vec3& v1, const Vec3& v2)
 {
 	return Vec3(v1.y*v2.z - v1.z*v2.y, v1.z*v2.x - v1.x*v2.z, v1.x*v2.y - v1.y*v2.x);
 }
 
 // Test if a float value is approximately 0. Epsilon value is the range around zero that
 // is considered equal to zero. Default value requires zero to 6 decimal places
-inline bool IsZero(const float x)
+bool IsZero(const float x)
 {
 	return fabsf(x) < kfEpsilon;
 }
 
 // 1 / Sqrt
-inline float InvSqrt(const float x)
+float InvSqrt(const float x)
 {
 	return 1.0f / sqrtf(x);
 }

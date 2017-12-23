@@ -10,7 +10,9 @@
     <ClCompile Include="Vec3.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="Matrix4x4.cpp" />
+    <ClCompile Include="Matrix4x4.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
@@ -30,6 +32,8 @@
     <ClInclude Include="Vec3.h">
       <Filter>Header</Filter>
     </ClInclude>
-    <ClInclude Include="Matrix4x4.h" />
+    <ClInclude Include="Matrix4x4.h">
+      <Filter>Header</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

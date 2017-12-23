@@ -35,7 +35,8 @@ void main()
 	vector<pair<int, int>> waypoints = pCMyPathFinder->GetPath();
 	bool displayedFoundPath = false;
 	bool guardMove = false;
-	const float EPS = std::numeric_limits<float>::epsilon();
+	//const float EPS = std::numeric_limits<float>::epsilon() * 100;
+	const float EPS = 0.1f;
 
 	// keybindings
 	EKeyCode buttonClose = Key_Escape;	// quit key
@@ -115,8 +116,9 @@ void main()
 	map[mapEnd.second][mapEnd.first] = cubeTypes::end;
 
 	// mob variables
-	float mobSpeed = 3.00f;
-	pair<int, int> mobPos;
+	float mobSpeed = 1.0f;
+	float halfMobHieght = 1.742465f / 2.0f;
+	pair<float, float> mobPos;
 
 	// mob
 	IModel* mob = mobMesh->CreateModel();
@@ -210,18 +212,19 @@ void main()
 			mobPos.first = mob->GetX();
 			mobPos.second = mob->GetZ();
 
-			//mob->LookAt(waypoints[currentPoint].first, 0.0f, waypoints[currentPoint].second);
-			LookAt(Vec3(waypoints[currentPoint].first, 0.0f, waypoints[currentPoint].second), mob);
-			mob->MoveLocalZ(mobSpeed * frameTimer);
-
-			if (mobPos.first < waypoints[currentPoint].first + EPS && mobPos.first > waypoints[currentPoint].first - EPS &&
-				mobPos.second < waypoints[currentPoint].second + EPS && mobPos.second > waypoints[currentPoint].second - EPS)
+			if (mobPos.first < waypoints[currentPoint].first * cubeSize + EPS && mobPos.first > waypoints[currentPoint].first * cubeSize - EPS &&
+				mobPos.second < waypoints[currentPoint].second * cubeSize + EPS && mobPos.second > waypoints[currentPoint].second * cubeSize - EPS)
 			{
 				if (currentPoint + 1 < waypoints.size())
 					++currentPoint;
 				else
 					guardMove = false;
 			}
+
+			LookAt(Vec3(waypoints[currentPoint].first * cubeSize, halfMobHieght, waypoints[currentPoint].second * cubeSize), mob);
+			mob->Scale(cubeSize);
+			mob->MoveLocalZ(mobSpeed * frameTimer);
+
 		}
 
 		/**** Update your scene each frame here ****/
