@@ -1,10 +1,13 @@
-// CO2301 Path-Finding.cpp: A program using the TL-Engine
+﻿// CO2301 Path-Finding.cpp: A program using the TL-Engine
 // Stuart Hayes		20363714
+
+// TODO add https://stackoverflow.com/questions/612097/how-can-i-get-the-list-of-files-in-a-directory-using-c-or-c
 
 #include <TL-Engine.h>	// TL-Engine include file and namespace
 #include "PathFinder.h" // path finder class
-#include "Vec3.h"
+#include "Vec3.h"		// Vec3
 #include "Matrix4x4.h"	// 4x4 matrics class
+#include <direct.h>		// DIR
 using namespace tle;
 
 enum cubeTypes { wall, clear, wood, water, start, end, numOfCubeTypes };
@@ -31,6 +34,7 @@ void main()
 	const float TIME_BETWEEN_STEPS = 1.00f;
 	float timeLeftForNextStep = TIME_BETWEEN_STEPS;
 	bool autoStep = false;
+	bool singleStep = false;
 	int currentPoint = -2;
 	vector<pair<int, int>> waypoints = pCMyPathFinder->GetPath();
 	bool displayedFoundPath = false;
@@ -42,8 +46,15 @@ void main()
 	EKeyCode buttonClose = Key_Escape;	// quit key
 	EKeyCode autoStepButton = Key_A;	// auto step key
 	EKeyCode singleStepButton = Key_Space;	// single step key
+	EKeyCode hideUIButton = Key_F1;		// Hide ui key
 
 	/**** Set up your scene here ****/
+	// fond
+	const int textSize = 24;
+	IFont* myFont = pMyEngine->LoadFont("Consolas", textSize);
+	bool ShowUI = true;
+	const int numOfUI = 7;
+	string UI_Info[numOfUI] = {"F1: Hide UI", "F2: Hide Map File", "A: Auto step", "Space: Single step", "L: Load Map", "Left Arrow: Previous map file", "Right Arrow: Next map file" };
 
 	// Meshs
 	IMesh* floorMesh = pMyEngine->LoadMesh("Floor.x");
@@ -149,8 +160,9 @@ void main()
 		if (autoStep)
 			timeLeftForNextStep -= frameTimer;
 
-		if (timeLeftForNextStep < 0.0f && !displayedFoundPath)
+		if ((timeLeftForNextStep < 0.0f || singleStep ) && !displayedFoundPath)
 		{
+			singleStep = false;
 			timeLeftForNextStep = TIME_BETWEEN_STEPS;
 			++currentPoint;
 			pair<int, int> currentWaypath;
@@ -207,7 +219,7 @@ void main()
 			}
 		}
 
-		if (timeLeftForNextStep < 0.0f && guardMove)
+		if ((timeLeftForNextStep < 0.0f || singleStep) && guardMove)
 		{
 			mobPos.first = mob->GetX();
 			mobPos.second = mob->GetZ();
@@ -216,7 +228,10 @@ void main()
 				mobPos.second < waypoints[currentPoint].second * cubeSize + EPS && mobPos.second > waypoints[currentPoint].second * cubeSize - EPS)
 			{
 				if (currentPoint + 1 < waypoints.size())
+				{
 					++currentPoint;
+					singleStep = false;
+				}
 				else
 					guardMove = false;
 			}
@@ -224,17 +239,29 @@ void main()
 			LookAt(Vec3(waypoints[currentPoint].first * cubeSize, halfMobHieght, waypoints[currentPoint].second * cubeSize), mob);
 			mob->Scale(cubeSize);
 			mob->MoveLocalZ(mobSpeed * frameTimer);
-
 		}
 
-		/**** Update your scene each frame here ****/
+		// UI
+		if (ShowUI)
+		{
+			for (int i = 0; i < numOfUI; ++i)
+			{
+				myFont->Draw(UI_Info[i], 0, textSize * i);
+			}
+		}
+
+		// keybindings
 		if (pMyEngine->KeyHit(autoStepButton))
 		{
 			autoStep = !autoStep;
 		}
 		if (pMyEngine->KeyHit(singleStepButton))
 		{
-			
+			singleStep = true;
+		}
+		if (pMyEngine->KeyHit(hideUIButton))
+		{
+			ShowUI = !ShowUI;
 		}
 
 		// close
