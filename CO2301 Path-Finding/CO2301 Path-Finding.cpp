@@ -1,13 +1,11 @@
 ﻿// CO2301 Path-Finding.cpp: A program using the TL-Engine
 // Stuart Hayes		20363714
 
-// TODO add https://stackoverflow.com/questions/612097/how-can-i-get-the-list-of-files-in-a-directory-using-c-or-c
-
 #include <TL-Engine.h>	// TL-Engine include file and namespace
 #include "PathFinder.h" // path finder class
 #include "Vec3.h"		// Vec3
 #include "Matrix4x4.h"	// 4x4 matrics class
-#include <direct.h>		// DIR
+#include <filesystem>	// filesystem
 using namespace tle;
 
 enum cubeTypes { wall, clear, wood, water, start, end, numOfCubeTypes };
@@ -15,6 +13,7 @@ enum cubeStatus { unknown, seen, visited, numOfStatus };
 
 // declarations
 void LookAt(Vec3 targetPosition, IModel* myModel);
+vector<string> GetFiles();
 
 void main()
 {
@@ -22,8 +21,10 @@ void main()
 	I3DEngine* pMyEngine = New3DEngine(kTLX);
 	pMyEngine->StartWindowed();
 
+	vector<string> ListOfMaps = GetFiles();
+
 	// Pathfinder
-	CPathFinder* pCMyPathFinder = new CPathFinder("m");
+	CPathFinder* pCMyPathFinder = new CPathFinder(ListOfMaps[0]);
 
 	// Add default folder for meshes and other media
 	pMyEngine->AddMediaFolder("C:\\ProgramData\\TL-Engine\\Media");
@@ -39,22 +40,25 @@ void main()
 	vector<pair<int, int>> waypoints = pCMyPathFinder->GetPath();
 	bool displayedFoundPath = false;
 	bool guardMove = false;
-	//const float EPS = std::numeric_limits<float>::epsilon() * 100;
 	const float EPS = 0.1f;
+	int currentMap = 0;
 
 	// keybindings
 	EKeyCode buttonClose = Key_Escape;	// quit key
 	EKeyCode autoStepButton = Key_A;	// auto step key
 	EKeyCode singleStepButton = Key_Space;	// single step key
 	EKeyCode hideUIButton = Key_F1;		// Hide ui key
+	EKeyCode hideMapUIButton = Key_F2;		// Hide ui key
 
 	/**** Set up your scene here ****/
-	// fond
+	// font
 	const int textSize = 24;
 	IFont* myFont = pMyEngine->LoadFont("Consolas", textSize);
 	bool ShowUI = true;
-	const int numOfUI = 7;
-	string UI_Info[numOfUI] = {"F1: Hide UI", "F2: Hide Map File", "A: Auto step", "Space: Single step", "L: Load Map", "Left Arrow: Previous map file", "Right Arrow: Next map file" };
+	bool ShowMapUI = true;
+	int mapTestPos = pMyEngine->GetWidth() % pMyEngine->GetHeight() * 3 / 4 + pMyEngine->GetHeight();
+	const int numOfUI = 8;
+	string UI_Info[numOfUI] = {"F1: Hide UI", "F2: Hide Map File", "A: Auto step", "Space: Single step", "L: Load Map", "Left Arrow: Previous", "map file", "Right Arrow: Next map file"};
 
 	// Meshs
 	IMesh* floorMesh = pMyEngine->LoadMesh("Floor.x");
@@ -160,7 +164,7 @@ void main()
 		if (autoStep)
 			timeLeftForNextStep -= frameTimer;
 
-		if ((timeLeftForNextStep < 0.0f || singleStep ) && !displayedFoundPath)
+		if ((0.0f > timeLeftForNextStep || singleStep ) && !displayedFoundPath)
 		{
 			singleStep = false;
 			timeLeftForNextStep = TIME_BETWEEN_STEPS;
@@ -219,7 +223,7 @@ void main()
 			}
 		}
 
-		if ((timeLeftForNextStep < 0.0f || singleStep) && guardMove)
+		if ((0.0f > timeLeftForNextStep || singleStep) && guardMove)
 		{
 			mobPos.first = mob->GetX();
 			mobPos.second = mob->GetZ();
@@ -249,6 +253,11 @@ void main()
 				myFont->Draw(UI_Info[i], 0, textSize * i);
 			}
 		}
+		if (ShowMapUI && ShowUI)
+		{
+			myFont->Draw("Current map:", mapTestPos, 0, kBlack, kCentre);
+			myFont->Draw(ListOfMaps[currentMap], mapTestPos, textSize, kBlack, kCentre);
+		}
 
 		// keybindings
 		if (pMyEngine->KeyHit(autoStepButton))
@@ -259,9 +268,15 @@ void main()
 		{
 			singleStep = true;
 		}
+
+		// UI
 		if (pMyEngine->KeyHit(hideUIButton))
 		{
 			ShowUI = !ShowUI;
+		}
+		if (pMyEngine->KeyHit(hideMapUIButton))
+		{
+			ShowMapUI = !ShowMapUI;
 		}
 
 		// close
@@ -303,4 +318,45 @@ void LookAt(Vec3 targetPosition, IModel* myModel)
 	// Set position of guard using matrix
 	myModel->SetMatrix(&myMat.e00);
 
+}
+
+// check to see if 'test' ends with 'ending'
+bool EndsWith(string test, string ending)
+{
+	if (test.length() >= ending.length())
+	{
+		return (0 == test.compare(test.length() - ending.length(), ending.length(), ending));
+	}
+	return false;
+}
+
+vector<string> GetFiles()
+{
+	vector<string> MapsFound;
+	string last;
+	
+
+	for (auto & p : std::experimental::filesystem::directory_iterator("maps")) // long name but only used once
+	{
+		stringstream ss;
+		ss << p;
+
+		// substr uses 5 to skip maps\\ and 15 to skip the affex
+
+		if (EndsWith(ss.str(), "Coords.txt")) // coords found
+		{
+			last = ss.str().substr(5, ss.str().length() - 15); // Get prefix
+		}
+
+		else if (EndsWith(ss.str(), "Map.txt")) // map found
+		{
+			if (last.compare(ss.str().substr(5, ss.str().length() - 15))) // if prefix's match
+			{
+				// valid map
+				MapsFound.push_back(last);
+			}
+		}
+	}
+
+	return MapsFound;
 }
