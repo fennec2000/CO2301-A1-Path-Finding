@@ -7,10 +7,18 @@ bool CompareCoords(unique_ptr<coords>& lhs, unique_ptr<coords>& rhs)
 
 CPathFinder::CPathFinder(string givenFileName)
 {
+	SetMap(givenFileName);
+}
+
+void CPathFinder::SetMap(string givenFileName)
+{
 	// Reset the stats
 	NumOfSorts = 0;
 	NumOfNodesVisited = 0;
 	NumOfNodesSeen = 0;
+
+	mMap.clear();
+	mPath.clear();
 
 	fileName = givenFileName;
 	Load(fileName);

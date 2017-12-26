@@ -48,7 +48,10 @@ void main()
 	EKeyCode autoStepButton = Key_A;	// auto step key
 	EKeyCode singleStepButton = Key_Space;	// single step key
 	EKeyCode hideUIButton = Key_F1;		// Hide ui key
-	EKeyCode hideMapUIButton = Key_F2;		// Hide ui key
+	EKeyCode hideMapUIButton = Key_F2;	// Hide ui key
+	EKeyCode nextMapButton = Key_Right;	// Next map button
+	EKeyCode prevMapButton = Key_Left;	// Previous map button
+	EKeyCode loadMapButton = Key_Return;	// Load the current map
 
 	/**** Set up your scene here ****/
 	// font
@@ -57,8 +60,8 @@ void main()
 	bool ShowUI = true;
 	bool ShowMapUI = true;
 	int mapTestPos = pMyEngine->GetWidth() % pMyEngine->GetHeight() * 3 / 4 + pMyEngine->GetHeight();
-	const int numOfUI = 8;
-	string UI_Info[numOfUI] = {"F1: Hide UI", "F2: Hide Map File", "A: Auto step", "Space: Single step", "L: Load Map", "Left Arrow: Previous", "map file", "Right Arrow: Next map file"};
+	const int numOfUI = 9;
+	string UI_Info[numOfUI] = { "F1: Hide UI", "F2: Hide Map File", "A: Auto step", "Space: Single step", "L: Load Map", "Left Arrow: Previous", "map file", "Right Arrow: Next map", "file" };
 
 	// Meshs
 	IMesh* floorMesh = pMyEngine->LoadMesh("Floor.x");
@@ -164,14 +167,14 @@ void main()
 		if (autoStep)
 			timeLeftForNextStep -= frameTimer;
 
-		if ((0.0f > timeLeftForNextStep || singleStep ) && !displayedFoundPath)
+		if ((0.0f > timeLeftForNextStep || singleStep) && !displayedFoundPath)
 		{
 			singleStep = false;
 			timeLeftForNextStep = TIME_BETWEEN_STEPS;
 			++currentPoint;
 			pair<int, int> currentWaypath;
 
-			if (currentPoint ==-1) // starting point
+			if (currentPoint == -1) // starting point
 				currentWaypath = mapStart;
 			else
 				currentWaypath = waypoints[currentPoint];
@@ -269,6 +272,80 @@ void main()
 			singleStep = true;
 		}
 
+		if (pMyEngine->KeyHit(nextMapButton))
+		{
+			++currentMap;
+			if (ListOfMaps.size() <= currentMap)
+				currentMap = 0;
+		}
+		if (pMyEngine->KeyHit(prevMapButton))
+		{
+			--currentMap;
+			if (0 > currentMap)
+				currentMap = ListOfMaps.size() - 1;
+		}
+		if (pMyEngine->KeyHit(loadMapButton))
+		{
+			pCMyPathFinder->SetMap(ListOfMaps[currentMap]);
+
+			// Stop the auto solve
+			autoStep = false;
+
+			// Reset Data
+			currentPoint = -2;
+			waypoints = pCMyPathFinder->GetPath();
+			displayedFoundPath = false;
+			guardMove = false;
+			mapSize = pCMyPathFinder->GetMapSize();
+			mapStart = pCMyPathFinder->GetMapStart();
+			mapEnd = pCMyPathFinder->GetMapEnd();
+			map = pCMyPathFinder->GetMap();
+
+
+			for (int i = 0; i < mapSize.second; ++i)
+			{
+				for (int j = 0; j < mapSize.first; ++j)
+				{
+					switch (map[i][j])
+					{
+					case cubeTypes::wall:
+						cubes[i][j]->SetPosition(j * cubeSize, cubeYOffset[cubeTypes::wall], i * cubeSize);
+						cubes[i][j]->SetSkin(cubeSkins[cubeStatus::unknown][cubeTypes::wall]);
+						break;
+					case cubeTypes::clear:
+						cubes[i][j]->SetPosition(j * cubeSize, cubeYOffset[cubeTypes::clear], i * cubeSize);
+						cubes[i][j]->SetSkin(cubeSkins[cubeStatus::unknown][cubeTypes::clear]);
+						break;
+					case cubeTypes::wood:
+						cubes[i][j]->SetPosition(j * cubeSize, cubeYOffset[cubeTypes::wood], i * cubeSize);
+						cubes[i][j]->SetSkin(cubeSkins[cubeStatus::unknown][cubeTypes::wood]);
+						break;
+					case cubeTypes::water:
+						cubes[i][j]->SetPosition(j * cubeSize, cubeYOffset[cubeTypes::water], i * cubeSize);
+						cubes[i][j]->SetSkin(cubeSkins[cubeStatus::unknown][cubeTypes::water]);
+						break;
+					default:
+#ifdef DEBUG
+						cout << "Invalid cube type" << endl;
+#endif // DEBUG
+
+						break;
+					}
+				}
+			}
+
+			// set the start
+			cubes[mapStart.second][mapStart.first]->SetSkin(cubeSkins[cubeStatus::unknown][cubeTypes::start]);
+			map[mapStart.second][mapStart.first] = cubeTypes::start;
+
+			// set the end
+			cubes[mapEnd.second][mapEnd.first]->SetSkin(cubeSkins[cubeStatus::unknown][cubeTypes::end]);
+			map[mapEnd.second][mapEnd.first] = cubeTypes::end;
+
+			// Reset mob
+			mob->SetPosition(mapStart.first * cubeSize, 0.0f, mapStart.second * cubeSize);
+		}
+
 		// UI
 		if (pMyEngine->KeyHit(hideUIButton))
 		{
@@ -334,7 +411,7 @@ vector<string> GetFiles()
 {
 	vector<string> MapsFound;
 	string last;
-	
+
 
 	for (auto & p : std::experimental::filesystem::directory_iterator("maps")) // long name but only used once
 	{

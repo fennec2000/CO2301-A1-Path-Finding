@@ -65,5 +65,6 @@ public:
 	pair<int, int> GetMapStart() { return mStart; };	// returns the start
 	pair<int, int> GetMapEnd() { return mEnd; };		// returns the end
 	vector<pair<int, int>> GetPath() { return mPath; };	// returns the path
+	void SetMap(string givenFileName);					// Set a new map
 };
 
