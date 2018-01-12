@@ -202,12 +202,6 @@ void CPathFinder::SolveAStar()
 				break;
 			}
 
-
-#ifdef DEBUG
-			std::cout << "tmp: x: " << tmp->location.first << ", y: " << tmp->location.second << ". Parent: " << tmp->parent << " ";
-			std::cout << "Tile: " << mMap[tmp->location.second][tmp->location.first] << " ";
-#endif // DEBUG
-
 			// is valid?
 			if (tmp->location.first < 0 || tmp->location.first >= mMapSize.first ||
 				tmp->location.second < 0 || tmp->location.second >= mMapSize.second)
@@ -217,6 +211,10 @@ void CPathFinder::SolveAStar()
 #endif // DEBUG
 				continue; // std::cout of bounds go to next itt
 			}
+#ifdef DEBUG
+			std::cout << "tmp: x: " << tmp->location.first << ", y: " << tmp->location.second << ". Parent: " << tmp->parent << " ";
+			std::cout << "Tile: " << mMap[tmp->location.second][tmp->location.first] << " ";
+#endif // DEBUG
 
 			// valid node so we see it
 			++NumOfNodesSeen;
@@ -289,21 +287,32 @@ void CPathFinder::SolveAStar()
 
 #endif // DEBUG
 	}
-	// Get a list from end to start
-	ReturnPath(goal);
-	// flip the list
-	reverse(mPath.begin(), mPath.end());
-	// print to xOutput.txt
-	WriteResult();
 
-	// output info to xStats.txt
+	if (!found)
+	{
+		std::cout << "Path not found" << endl;
+	}
+	else
+	{
+		// Get a list from end to start
+		ReturnPath(goal);
+		// flip the list
+		reverse(mPath.begin(), mPath.end());
+		// print to xOutput.txt
+		WriteResult();
+
+		// output info to xStats.txt
 #ifdef DEBUG // neaten the debug output
-	std::cout << "Number of sorts: " << NumOfSorts <<  endl;
-	std::cout << "openList: " << endl;
-	DisplayList(openList);
-	std::cout << "closedList: " << endl;
-	DisplayList(closedList);
+		std::cout << "Number of sorts: " << NumOfSorts << endl;
+		std::cout << "openList: " << endl;
+		DisplayList(openList);
+		std::cout << "closedList: " << endl;
+		DisplayList(closedList);
 #endif // DEBUG
+	}
+	
+
+
 }
 
 int CPathFinder::CalcManDist(pair<int, int> Loc)

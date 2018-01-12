@@ -8,12 +8,13 @@
 #include <filesystem>	// filesystem
 using namespace tle;
 
-enum cubeTypes { wall, clear, wood, water, start, end, numOfCubeTypes };
+enum cubeTypes { wall, clear, wood, water, start, end, hidden, numOfCubeTypes };
 enum cubeStatus { unknown, seen, visited, numOfStatus };
 
 // declarations
 void LookAt(Vec3 targetPosition, IModel* myModel);
 vector<string> GetFiles();
+pair<float, float> Bezeir(vector<pair<int, int>> &waypoints, int currentPoint, int splits, int currentSplit, pair<int, int> mapStart);
 
 void main()
 {
@@ -42,6 +43,10 @@ void main()
 	bool guardMove = false;
 	const float EPS = 0.1f;
 	int currentMap = 0;
+	const int numOfBezierSections = 10;
+	int currentBezierSection = 1;
+	pair<float, float> BezierWaypoint(-2.0f, -2.0f);
+	bool haveBezierWaypoint = false;
 
 	// keybindings
 	EKeyCode buttonClose = Key_Escape;	// quit key
@@ -61,7 +66,7 @@ void main()
 	bool ShowMapUI = true;
 	int mapTestPos = pMyEngine->GetWidth() % pMyEngine->GetHeight() * 3 / 4 + pMyEngine->GetHeight();
 	const int numOfUI = 9;
-	string UI_Info[numOfUI] = { "F1: Hide UI", "F2: Hide Map File", "A: Auto step", "Space: Single step", "L: Load Map", "Left Arrow: Previous", "map file", "Right Arrow: Next map", "file" };
+	string UI_Info[numOfUI] = { "F1: Hide UI", "F2: Hide Map File", "A: Auto step", "Space: Single step", "Enter: Load Map", "Left Arrow: Previous", "map file", "Right Arrow: Next map", "file" };
 
 	// Meshs
 	IMesh* floorMesh = pMyEngine->LoadMesh("Floor.x");
@@ -148,13 +153,10 @@ void main()
 
 	// myCamera
 	ICamera* myCamera = pMyEngine->CreateCamera(kManual);
-	myCamera->SetPosition(cubeSize * 4.5f, 100.0f, cubeSize * 4.5f);
+	myCamera->SetPosition(cubeSize * 4.5f, cubeSize * 10.0f, cubeSize * 4.5f);
 	myCamera->RotateX(90.0f);
 	myCamera->SetMovementSpeed(2.0f * MY_CAMERA_SPEED);
 	myCamera->SetRotationSpeed(MY_CAMERA_SPEED);
-
-	// hide mouse
-	//pMyEngine->StartMouseCapture();
 
 	// The main game loop, repeat until engine is stopped
 	while (pMyEngine->IsRunning())
@@ -203,6 +205,15 @@ void main()
 				default:
 					break;
 				}
+				// is valid?
+				if (tmp.first < 0 || tmp.first >= mapSize.first ||
+					tmp.second < 0 || tmp.second >= mapSize.second)
+				{
+#ifdef DEBUG
+					std::cout << "Tile out of bounds" << endl;
+#endif // DEBUG
+					continue; // std::cout of bounds go to next itt
+				}
 
 				// if wall ignore
 				if (map[tmp.second][tmp.first] % cubeTypes::numOfCubeTypes == cubeTypes::wall)
@@ -231,19 +242,46 @@ void main()
 			mobPos.first = mob->GetX();
 			mobPos.second = mob->GetZ();
 
-			if (mobPos.first < waypoints[currentPoint].first * cubeSize + EPS && mobPos.first > waypoints[currentPoint].first * cubeSize - EPS &&
-				mobPos.second < waypoints[currentPoint].second * cubeSize + EPS && mobPos.second > waypoints[currentPoint].second * cubeSize - EPS)
+			// at goal?
+			if (mobPos.first < waypoints[waypoints.size() - 1].first * cubeSize + EPS && mobPos.first > waypoints[waypoints.size() - 1].first * cubeSize - EPS &&
+				mobPos.second < waypoints[waypoints.size() - 1].second * cubeSize + EPS && mobPos.second > waypoints[waypoints.size() - 1].second * cubeSize - EPS)
 			{
-				if (currentPoint + 1 < waypoints.size())
-				{
-					++currentPoint;
-					singleStep = false;
-				}
-				else
-					guardMove = false;
+				guardMove = false;
 			}
 
-			LookAt(Vec3(waypoints[currentPoint].first * cubeSize, halfMobHieght, waypoints[currentPoint].second * cubeSize), mob);
+			// last waypoint
+			if (currentPoint >= waypoints.size() - 1)
+			{
+				LookAt(Vec3(waypoints[waypoints.size() - 1].first * cubeSize, halfMobHieght, waypoints[waypoints.size() - 1].second * cubeSize), mob);
+			}
+			else
+			{
+				if (std::floorf(numOfBezierSections * 0.6f) <= currentBezierSection)
+				{
+					++currentPoint;
+					currentBezierSection = std::ceilf(numOfBezierSections * 0.3f);
+					haveBezierWaypoint = false;
+				}
+
+				if (!haveBezierWaypoint)
+				{
+					BezierWaypoint = Bezeir(waypoints, currentPoint, numOfBezierSections, currentBezierSection, mapStart);
+					cout << "wp: " << waypoints[currentPoint].first << ", " << waypoints[currentPoint].second << " step: " << currentBezierSection / static_cast<float>(numOfBezierSections) << ", Bez: " << BezierWaypoint.first << ", " << BezierWaypoint.second << endl;
+					haveBezierWaypoint = true;
+				}
+
+
+				if (mobPos.first < BezierWaypoint.first * cubeSize + EPS && mobPos.first > BezierWaypoint.first * cubeSize - EPS &&
+					mobPos.second < BezierWaypoint.second * cubeSize + EPS && mobPos.second > BezierWaypoint.second * cubeSize - EPS)
+				{
+					++currentBezierSection;
+					haveBezierWaypoint = false;
+
+
+				}
+
+				LookAt(Vec3(BezierWaypoint.first * cubeSize, halfMobHieght, BezierWaypoint.second * cubeSize), mob);
+			}
 			mob->Scale(cubeSize);
 			mob->MoveLocalZ(mobSpeed * frameTimer);
 		}
@@ -260,14 +298,16 @@ void main()
 		{
 			myFont->Draw("Current map:", mapTestPos, 0, kBlack, kCentre);
 			myFont->Draw(ListOfMaps[currentMap], mapTestPos, textSize, kBlack, kCentre);
+			if (waypoints.empty())
+				myFont->Draw("No Path Found", mapTestPos, textSize * 2, kBlack, kCentre);
 		}
 
 		// keybindings
-		if (pMyEngine->KeyHit(autoStepButton))
+		if (pMyEngine->KeyHit(autoStepButton) && !waypoints.empty())
 		{
 			autoStep = !autoStep;
 		}
-		if (pMyEngine->KeyHit(singleStepButton))
+		if (pMyEngine->KeyHit(singleStepButton) && !waypoints.empty())
 		{
 			singleStep = true;
 		}
@@ -296,16 +336,42 @@ void main()
 			waypoints = pCMyPathFinder->GetPath();
 			displayedFoundPath = false;
 			guardMove = false;
+			currentBezierSection = 1;
+			haveBezierWaypoint = false;
 			mapSize = pCMyPathFinder->GetMapSize();
 			mapStart = pCMyPathFinder->GetMapStart();
 			mapEnd = pCMyPathFinder->GetMapEnd();
 			map = pCMyPathFinder->GetMap();
 
+			if (mapSize.second * 9 > mapSize.first * 16)
+				myCamera->SetPosition(cubeSize * (mapSize.first * 0.5f - 0.5f), cubeSize * mapSize.second, cubeSize * (mapSize.second * 0.5f - 0.5f));
+			else
+				myCamera->SetPosition(cubeSize * (mapSize.first * 0.5f - 0.5f), cubeSize * mapSize.first, cubeSize * (mapSize.second * 0.5f - 0.5f));
+
+			for (int i = 0; i < cubes.size(); ++i)
+			{
+				for (int j = 0; j < cubes[i].size(); ++j)
+				{
+					cubes[i][j]->MoveY(-cubeSize * 2);
+				}
+			}
 
 			for (int i = 0; i < mapSize.second; ++i)
 			{
 				for (int j = 0; j < mapSize.first; ++j)
 				{
+					while (cubes.size() <= i)
+					{
+						vector <IModel*> tmpCubes;
+						cubes.push_back(tmpCubes);
+					}
+
+					while (cubes[i].size() <= j)
+					{
+						IModel* tmpCubeModel = cubeMesh->CreateModel(j * cubeSize, -cubeSize * 2, i * cubeSize);
+						cubes[i].push_back(tmpCubeModel);
+					}
+
 					switch (map[i][j])
 					{
 					case cubeTypes::wall:
@@ -436,4 +502,36 @@ vector<string> GetFiles()
 	}
 
 	return MapsFound;
+}
+
+float BezeirFormula(float t, float p1x, float p2x, float p3x, float p4x)
+{
+	return (1-t) * (1-t) * (1-t) * p1x + 3 * t * (1-t) * (1-t) * p2x + 3 * t * t * (1-t) * p3x + t * t * t * p4x;
+}
+
+pair<float, float> Bezeir(vector<pair<int, int>> &waypoints, int currentPoint, int splits, int currentSplit, pair<int, int> mapStart)
+{
+	pair<float, float> ans;
+
+	if (0 == currentPoint)
+	{
+		ans.second = BezeirFormula(currentSplit / static_cast<float>(splits), mapStart.second, mapStart.second, waypoints[currentPoint].second, waypoints[currentPoint + 1].second);
+		ans.first = BezeirFormula(currentSplit / static_cast<float>(splits), mapStart.first, mapStart.first, waypoints[currentPoint].first, waypoints[currentPoint + 1].first);
+	}
+	else if (1 == currentPoint)
+	{
+		ans.second = BezeirFormula(currentSplit / static_cast<float>(splits), mapStart.second, waypoints[currentPoint - 1].second, waypoints[currentPoint].second, waypoints[currentPoint + 1].second);
+		ans.first = BezeirFormula(currentSplit / static_cast<float>(splits), mapStart.first, waypoints[currentPoint - 1].first, waypoints[currentPoint].first, waypoints[currentPoint + 1].first);
+	}
+	else if (waypoints.size() - 1 == currentPoint)
+	{
+		ans.second = BezeirFormula(currentSplit / static_cast<float>(splits), waypoints[currentPoint - 2].second, waypoints[currentPoint - 1].second, waypoints[currentPoint].second, waypoints[currentPoint].second);
+		ans.first = BezeirFormula(currentSplit / static_cast<float>(splits), waypoints[currentPoint - 2].first, waypoints[currentPoint - 1].first, waypoints[currentPoint].first, waypoints[currentPoint].first);
+	}
+	else
+	{
+		ans.second = BezeirFormula(currentSplit / static_cast<float>(splits), waypoints[currentPoint - 2].second, waypoints[currentPoint - 1].second, waypoints[currentPoint].second, waypoints[currentPoint + 1].second);
+		ans.first = BezeirFormula(currentSplit / static_cast<float>(splits), waypoints[currentPoint - 2].first, waypoints[currentPoint - 1].first, waypoints[currentPoint].first, waypoints[currentPoint + 1].first);
+	}
+	return ans;
 }
