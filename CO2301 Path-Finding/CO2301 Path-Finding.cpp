@@ -8,23 +8,72 @@
 #include <filesystem>	// filesystem
 using namespace tle;
 
-enum cubeTypes { wall, clear, wood, water, start, end, numOfCubeTypes };
-enum cubeStatus { unknown, seen, visited, numOfStatus };
-
 // declarations
 void LookAt(Vec3 targetPosition, IModel* myModel);
 vector<string> GetFiles();
+pair<float, float> Bezeir(vector<pair<int, int>> &waypoints, int currentPoint, int splits, int currentSplit, pair<int, int> mapStart);
+
+// Global
+vector <vector <IModel*>> cubes;
+I3DEngine* pMyEngine;
+
+// cubes
+string cubeSkins[cubeStatus::numOfStatus][cubeTypes::numOfCubeTypes] = {
+	{ "wall.jpg", "clear.jpg", "wood.jpg", "water.jpg", "start.jpg", "end.jpg" },
+	{ "na", "clear_seen.jpg", "wood_seen.jpg", "water_seen.jpg", "start_seen.jpg", "end_seen.jpg" },
+	{ "na", "clear_visited.jpg", "wood_visited.jpg", "water_visited.jpg", "start_visited.jpg", "end_visited.jpg" }, };
+float cubeYOffset[] = { 0.0f, -5.0f, -4.5f, -5.5f };
+float cubeSize = 10.0f;
+
+void SetMapSquare(int i, int j, cubeTypes newType, cubeStatus newStatus)
+{
+	switch (newType)
+	{
+	case cubeTypes::wall:
+		cubes[i][j]->SetPosition(j * cubeSize, cubeYOffset[cubeTypes::wall], i * cubeSize);
+		cubes[i][j]->SetSkin(cubeSkins[newStatus][cubeTypes::wall]);
+		break;
+	case cubeTypes::clear:
+		cubes[i][j]->SetPosition(j * cubeSize, cubeYOffset[cubeTypes::clear], i * cubeSize);
+		cubes[i][j]->SetSkin(cubeSkins[newStatus][cubeTypes::clear]);
+		break;
+	case cubeTypes::wood:
+		cubes[i][j]->SetPosition(j * cubeSize, cubeYOffset[cubeTypes::wood], i * cubeSize);
+		cubes[i][j]->SetSkin(cubeSkins[newStatus][cubeTypes::wood]);
+		break;
+	case cubeTypes::water:
+		cubes[i][j]->SetPosition(j * cubeSize, cubeYOffset[cubeTypes::water], i * cubeSize);
+		cubes[i][j]->SetSkin(cubeSkins[newStatus][cubeTypes::water]);
+		break;
+	case cubeTypes::start:
+		cubes[i][j]->SetPosition(j * cubeSize, cubeYOffset[cubeTypes::clear], i * cubeSize);
+		cubes[i][j]->SetSkin(cubeSkins[newStatus][cubeTypes::start]);
+		break;
+	case cubeTypes::end:
+		cubes[i][j]->SetPosition(j * cubeSize, cubeYOffset[cubeTypes::clear], i * cubeSize);
+		cubes[i][j]->SetSkin(cubeSkins[newStatus][cubeTypes::end]);
+		break;
+	default:
+#ifdef DEBUG
+		cout << "Invalid cube type" << endl;
+#endif // DEBUG
+		break;
+	}
+}
 
 void main()
 {
 	// Create a 3D engine (using TLX engine here) and open a window for it
-	I3DEngine* pMyEngine = New3DEngine(kTLX);
+	pMyEngine = New3DEngine(kTLX);
 	pMyEngine->StartWindowed();
 
 	vector<string> ListOfMaps = GetFiles();
 
 	// Pathfinder
 	CPathFinder* pCMyPathFinder = new CPathFinder(ListOfMaps[0]);
+	pCMyPathFinder->PassFunc(SetMapSquare);
+	pCMyPathFinder->PassEngine(pMyEngine);
+	pCMyPathFinder->SolveAStar();
 
 	// Add default folder for meshes and other media
 	pMyEngine->AddMediaFolder("C:\\ProgramData\\TL-Engine\\Media");
@@ -42,6 +91,10 @@ void main()
 	bool guardMove = false;
 	const float EPS = 0.1f;
 	int currentMap = 0;
+	const int numOfBezierSections = 10;
+	int currentBezierSection = 1;
+	pair<float, float> BezierWaypoint(-2.0f, -2.0f);
+	bool haveBezierWaypoint = false;
 
 	// keybindings
 	EKeyCode buttonClose = Key_Escape;	// quit key
@@ -52,6 +105,7 @@ void main()
 	EKeyCode nextMapButton = Key_Right;	// Next map button
 	EKeyCode prevMapButton = Key_Left;	// Previous map button
 	EKeyCode loadMapButton = Key_Return;	// Load the current map
+	EKeyCode liveMapVersion = Key_L;
 
 	/**** Set up your scene here ****/
 	// font
@@ -61,7 +115,7 @@ void main()
 	bool ShowMapUI = true;
 	int mapTestPos = pMyEngine->GetWidth() % pMyEngine->GetHeight() * 3 / 4 + pMyEngine->GetHeight();
 	const int numOfUI = 9;
-	string UI_Info[numOfUI] = { "F1: Hide UI", "F2: Hide Map File", "A: Auto step", "Space: Single step", "L: Load Map", "Left Arrow: Previous", "map file", "Right Arrow: Next map", "file" };
+	string UI_Info[numOfUI] = { "F1: Hide UI", "F2: Hide Map File", "A: Auto step", "Space: Single step", "Enter: Load Map", "Left Arrow: Previous", "map file", "Right Arrow: Next map", "file" };
 
 	// Meshs
 	IMesh* floorMesh = pMyEngine->LoadMesh("Floor.x");
@@ -70,21 +124,11 @@ void main()
 
 	// Models
 	IModel* floor = floorMesh->CreateModel(0.0f, -10.0f, 0.0f);
-
-	// cubes
-	string cubeSkins[cubeStatus::numOfStatus][cubeTypes::numOfCubeTypes] = {
-		{ "wall.jpg", "clear.jpg", "wood.jpg", "water.jpg", "start.jpg", "end.jpg" },
-		{ "na", "clear_seen.jpg", "wood_seen.jpg", "water_seen.jpg", "start_seen.jpg", "end_seen.jpg" },
-		{ "na", "clear_visited.jpg", "wood_visited.jpg", "water_visited.jpg", "start_visited.jpg", "end_visited.jpg" }, };
-	float cubeYOffset[] = { 0.0f, -5.0f, -4.5f, -5.5f };
-	float cubeSize = 10.0f;
-
 	// multi vector of cubes
 	pair<int, int> mapSize = pCMyPathFinder->GetMapSize();
 	pair<int, int> mapStart = pCMyPathFinder->GetMapStart();
 	pair<int, int> mapEnd = pCMyPathFinder->GetMapEnd();
 	vector<vector<int>> map = pCMyPathFinder->GetMap();
-	vector <vector <IModel*>> cubes;
 
 	for (int i = 0; i < mapSize.second; ++i)
 	{
@@ -111,6 +155,14 @@ void main()
 			case cubeTypes::water:
 				tmpCubeModel = cubeMesh->CreateModel(j * cubeSize, cubeYOffset[cubeTypes::water], i * cubeSize);
 				tmpCubeModel->SetSkin(cubeSkins[cubeStatus::unknown][cubeTypes::water]);
+				break;
+			case cubeTypes::start:
+				tmpCubeModel = cubeMesh->CreateModel(j * cubeSize, cubeYOffset[cubeTypes::clear], i * cubeSize);
+				tmpCubeModel->SetSkin(cubeSkins[cubeStatus::unknown][cubeTypes::start]);
+				break;
+			case cubeTypes::end:
+				tmpCubeModel = cubeMesh->CreateModel(j * cubeSize, cubeYOffset[cubeTypes::clear], i * cubeSize);
+				tmpCubeModel->SetSkin(cubeSkins[cubeStatus::unknown][cubeTypes::end]);
 				break;
 			default:
 #ifdef DEBUG
@@ -203,6 +255,15 @@ void main()
 				default:
 					break;
 				}
+				// is valid?
+				if (tmp.first < 0 || tmp.first >= mapSize.first ||
+					tmp.second < 0 || tmp.second >= mapSize.second)
+				{
+#ifdef DEBUG
+					std::cout << "Tile out of bounds" << endl;
+#endif // DEBUG
+					continue; // std::cout of bounds go to next itt
+				}
 
 				// if wall ignore
 				if (map[tmp.second][tmp.first] % cubeTypes::numOfCubeTypes == cubeTypes::wall)
@@ -231,19 +292,49 @@ void main()
 			mobPos.first = mob->GetX();
 			mobPos.second = mob->GetZ();
 
-			if (mobPos.first < waypoints[currentPoint].first * cubeSize + EPS && mobPos.first > waypoints[currentPoint].first * cubeSize - EPS &&
-				mobPos.second < waypoints[currentPoint].second * cubeSize + EPS && mobPos.second > waypoints[currentPoint].second * cubeSize - EPS)
+			if (mobPos.first > mapSize.first * cubeSize || mobPos.first < -cubeSize || mobPos.second > mapSize.second * cubeSize || mobPos.second < -cubeSize)
+				mob->SetPosition(mapStart.first * cubeSize, 0.0f, mapStart.second * cubeSize);
+
+			// at goal?
+			if (mobPos.first < waypoints[waypoints.size() - 1].first * cubeSize + EPS && mobPos.first > waypoints[waypoints.size() - 1].first * cubeSize - EPS &&
+				mobPos.second < waypoints[waypoints.size() - 1].second * cubeSize + EPS && mobPos.second > waypoints[waypoints.size() - 1].second * cubeSize - EPS)
 			{
-				if (currentPoint + 1 < waypoints.size())
-				{
-					++currentPoint;
-					singleStep = false;
-				}
-				else
-					guardMove = false;
+				guardMove = false;
 			}
 
-			LookAt(Vec3(waypoints[currentPoint].first * cubeSize, halfMobHieght, waypoints[currentPoint].second * cubeSize), mob);
+			// last waypoint
+			if (currentPoint >= waypoints.size() - 1)
+			{
+				LookAt(Vec3(waypoints[waypoints.size() - 1].first * cubeSize, halfMobHieght, waypoints[waypoints.size() - 1].second * cubeSize), mob);
+			}
+			else
+			{
+				if (std::floorf(numOfBezierSections * 0.6f) <= currentBezierSection)
+				{
+					++currentPoint;
+					currentBezierSection = std::ceilf(numOfBezierSections * 0.3f);
+					haveBezierWaypoint = false;
+				}
+
+				if (!haveBezierWaypoint)
+				{
+					BezierWaypoint = Bezeir(waypoints, currentPoint, numOfBezierSections, currentBezierSection, mapStart);
+					cout << "wp: " << waypoints[currentPoint].first << ", " << waypoints[currentPoint].second << " step: " << currentBezierSection / static_cast<float>(numOfBezierSections) << ", Bez: " << BezierWaypoint.first << ", " << BezierWaypoint.second << endl;
+					haveBezierWaypoint = true;
+				}
+
+
+				if (mobPos.first < BezierWaypoint.first * cubeSize + EPS && mobPos.first > BezierWaypoint.first * cubeSize - EPS &&
+					mobPos.second < BezierWaypoint.second * cubeSize + EPS && mobPos.second > BezierWaypoint.second * cubeSize - EPS)
+				{
+					++currentBezierSection;
+					haveBezierWaypoint = false;
+
+
+				}
+
+				LookAt(Vec3(BezierWaypoint.first * cubeSize, halfMobHieght, BezierWaypoint.second * cubeSize), mob);
+			}
 			mob->Scale(cubeSize);
 			mob->MoveLocalZ(mobSpeed * frameTimer);
 		}
@@ -260,9 +351,33 @@ void main()
 		{
 			myFont->Draw("Current map:", mapTestPos, 0, kBlack, kCentre);
 			myFont->Draw(ListOfMaps[currentMap], mapTestPos, textSize, kBlack, kCentre);
+			if (waypoints.empty())
+				myFont->Draw("No Path Found", mapTestPos, textSize * 2, kBlack, kCentre);
 		}
 
 		// keybindings
+		if (pMyEngine->KeyHit(liveMapVersion))
+		{
+			pCMyPathFinder->SetMap(ListOfMaps[currentMap]);
+			pCMyPathFinder->SolveAStar(true);
+
+			// Reset Data
+			waypoints = pCMyPathFinder->GetPath();
+			mapSize = pCMyPathFinder->GetMapSize();
+			mapStart = pCMyPathFinder->GetMapStart();
+			mapEnd = pCMyPathFinder->GetMapEnd();
+			map = pCMyPathFinder->GetMap();
+
+			if (!waypoints.empty())
+			{
+				displayedFoundPath = true;
+				guardMove = true;
+				autoStep = true;
+				currentPoint = 0;
+			}
+
+		}
+			
 		if (pMyEngine->KeyHit(autoStepButton))
 		{
 			autoStep = !autoStep;
@@ -287,6 +402,7 @@ void main()
 		if (pMyEngine->KeyHit(loadMapButton))
 		{
 			pCMyPathFinder->SetMap(ListOfMaps[currentMap]);
+			pCMyPathFinder->SolveAStar();
 
 			// Stop the auto solve
 			autoStep = false;
@@ -296,16 +412,42 @@ void main()
 			waypoints = pCMyPathFinder->GetPath();
 			displayedFoundPath = false;
 			guardMove = false;
+			currentBezierSection = 1;
+			haveBezierWaypoint = false;
 			mapSize = pCMyPathFinder->GetMapSize();
 			mapStart = pCMyPathFinder->GetMapStart();
 			mapEnd = pCMyPathFinder->GetMapEnd();
 			map = pCMyPathFinder->GetMap();
 
+			if (mapSize.second * 9 > mapSize.first * 16)
+				myCamera->SetPosition(cubeSize * (mapSize.first * 0.5f - 0.5f), cubeSize * mapSize.second, cubeSize * (mapSize.second * 0.5f - 0.5f));
+			else
+				myCamera->SetPosition(cubeSize * (mapSize.first * 0.5f - 0.5f), cubeSize * mapSize.first, cubeSize * (mapSize.second * 0.5f - 0.5f));
+
+			for (int i = 0; i < cubes.size(); ++i)
+			{
+				for (int j = 0; j < cubes[i].size(); ++j)
+				{
+					cubes[i][j]->MoveY(-cubeSize * 2);
+				}
+			}
 
 			for (int i = 0; i < mapSize.second; ++i)
 			{
 				for (int j = 0; j < mapSize.first; ++j)
 				{
+					while (cubes.size() <= i)
+					{
+						vector <IModel*> tmpCubes;
+						cubes.push_back(tmpCubes);
+					}
+
+					while (cubes[i].size() <= j)
+					{
+						IModel* tmpCubeModel = cubeMesh->CreateModel(j * cubeSize, -cubeSize * 2, i * cubeSize);
+						cubes[i].push_back(tmpCubeModel);
+					}
+
 					switch (map[i][j])
 					{
 					case cubeTypes::wall:
@@ -324,6 +466,13 @@ void main()
 						cubes[i][j]->SetPosition(j * cubeSize, cubeYOffset[cubeTypes::water], i * cubeSize);
 						cubes[i][j]->SetSkin(cubeSkins[cubeStatus::unknown][cubeTypes::water]);
 						break;
+					case cubeTypes::start:
+						cubes[i][j]->SetPosition(j * cubeSize, cubeYOffset[cubeTypes::clear], i * cubeSize);
+						cubes[i][j]->SetSkin(cubeSkins[cubeStatus::unknown][cubeTypes::start]);
+						break;
+					case cubeTypes::end:
+						cubes[i][j]->SetPosition(j * cubeSize, cubeYOffset[cubeTypes::clear], i * cubeSize);
+						cubes[i][j]->SetSkin(cubeSkins[cubeStatus::unknown][cubeTypes::end]);
 					default:
 #ifdef DEBUG
 						cout << "Invalid cube type" << endl;
@@ -436,4 +585,36 @@ vector<string> GetFiles()
 	}
 
 	return MapsFound;
+}
+
+float BezeirFormula(float t, float p1x, float p2x, float p3x, float p4x)
+{
+	return (1 - t) * (1 - t) * (1 - t) * p1x + 3 * t * (1 - t) * (1 - t) * p2x + 3 * t * t * (1 - t) * p3x + t * t * t * p4x;
+}
+
+pair<float, float> Bezeir(vector<pair<int, int>> &waypoints, int currentPoint, int splits, int currentSplit, pair<int, int> mapStart)
+{
+	pair<float, float> ans;
+
+	if (0 == currentPoint)
+	{
+		ans.second = BezeirFormula(currentSplit / static_cast<float>(splits), mapStart.second, mapStart.second, waypoints[currentPoint].second, waypoints[currentPoint + 1].second);
+		ans.first = BezeirFormula(currentSplit / static_cast<float>(splits), mapStart.first, mapStart.first, waypoints[currentPoint].first, waypoints[currentPoint + 1].first);
+	}
+	else if (1 == currentPoint)
+	{
+		ans.second = BezeirFormula(currentSplit / static_cast<float>(splits), mapStart.second, waypoints[currentPoint - 1].second, waypoints[currentPoint].second, waypoints[currentPoint + 1].second);
+		ans.first = BezeirFormula(currentSplit / static_cast<float>(splits), mapStart.first, waypoints[currentPoint - 1].first, waypoints[currentPoint].first, waypoints[currentPoint + 1].first);
+	}
+	else if (waypoints.size() - 1 == currentPoint)
+	{
+		ans.second = BezeirFormula(currentSplit / static_cast<float>(splits), waypoints[currentPoint - 2].second, waypoints[currentPoint - 1].second, waypoints[currentPoint].second, waypoints[currentPoint].second);
+		ans.first = BezeirFormula(currentSplit / static_cast<float>(splits), waypoints[currentPoint - 2].first, waypoints[currentPoint - 1].first, waypoints[currentPoint].first, waypoints[currentPoint].first);
+	}
+	else
+	{
+		ans.second = BezeirFormula(currentSplit / static_cast<float>(splits), waypoints[currentPoint - 2].second, waypoints[currentPoint - 1].second, waypoints[currentPoint].second, waypoints[currentPoint + 1].second);
+		ans.first = BezeirFormula(currentSplit / static_cast<float>(splits), waypoints[currentPoint - 2].first, waypoints[currentPoint - 1].first, waypoints[currentPoint].first, waypoints[currentPoint + 1].first);
+	}
+	return ans;
 }

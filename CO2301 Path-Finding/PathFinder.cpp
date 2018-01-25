@@ -10,6 +10,11 @@ CPathFinder::CPathFinder(string givenFileName)
 	SetMap(givenFileName);
 }
 
+void CPathFinder::PassEngine(I3DEngine* givenEngine)
+{
+	pMyEngine = givenEngine;
+}
+
 void CPathFinder::SetMap(string givenFileName)
 {
 	// Reset the stats
@@ -29,8 +34,11 @@ void CPathFinder::SetMap(string givenFileName)
 	std::cout << "Maps size: " << mMapSize.first << "x" << mMapSize.second << endl;
 	DisplayMap();
 #endif // _DEBUG
+}
 
-	SolveAStar();
+void CPathFinder::PassFunc(void(*function)(int i, int j, cubeTypes newType, cubeStatus newStatus))
+{
+	SetMapSquare = function;
 }
 
 
@@ -110,7 +118,9 @@ void CPathFinder::LoadMap(string givenMapName)
 	// set the map size
 	mMapSize.first = longestRow;
 	mMapSize.second = mMap.size();
-	reverse(mMap.begin(), mMap.end());
+	std::reverse(mMap.begin(), mMap.end());
+	mMap[mStart.second][mStart.first] = cubeTypes::start;
+	mMap[mEnd.second][mEnd.first] = cubeTypes::end;
 }
 
 void CPathFinder::DisplayMap()
@@ -129,7 +139,7 @@ void CPathFinder::DisplayMap()
 	std::cout << "Display end" << endl;
 }
 
-void CPathFinder::SolveAStar()
+void CPathFinder::SolveAStar(bool live)
 {
 	bool found = false;
 	deque <unique_ptr <coords>> openList, closedList;
@@ -160,6 +170,8 @@ void CPathFinder::SolveAStar()
 
 		// count node has visited
 		++NumOfNodesVisited;
+		if(live)
+			SetMapSquare(current->location.second, current->location.first, static_cast<cubeTypes>(mMap[current->location.second][current->location.first]), cubeStatus::visited);
 
 		// is goal?
 		if (current->location.first == mEnd.first && current->location.second == mEnd.second)
@@ -202,12 +214,6 @@ void CPathFinder::SolveAStar()
 				break;
 			}
 
-
-#ifdef DEBUG
-			std::cout << "tmp: x: " << tmp->location.first << ", y: " << tmp->location.second << ". Parent: " << tmp->parent << " ";
-			std::cout << "Tile: " << mMap[tmp->location.second][tmp->location.first] << " ";
-#endif // DEBUG
-
 			// is valid?
 			if (tmp->location.first < 0 || tmp->location.first >= mMapSize.first ||
 				tmp->location.second < 0 || tmp->location.second >= mMapSize.second)
@@ -217,6 +223,10 @@ void CPathFinder::SolveAStar()
 #endif // DEBUG
 				continue; // std::cout of bounds go to next itt
 			}
+#ifdef DEBUG
+			std::cout << "tmp: x: " << tmp->location.first << ", y: " << tmp->location.second << ". Parent: " << tmp->parent << " ";
+			std::cout << "Tile: " << mMap[tmp->location.second][tmp->location.first] << " ";
+#endif // DEBUG
 
 			// valid node so we see it
 			++NumOfNodesSeen;
@@ -228,7 +238,8 @@ void CPathFinder::SolveAStar()
 #ifdef DEBUG
 				std::cout << endl << "***End found***" << endl;
 #endif // DEBUG
-
+				if(live)
+					SetMapSquare(tmp->location.second, tmp->location.first, cubeTypes::end, cubeStatus::visited);
 				goal = move(tmp);
 				found = true;
 				break; // goal found
@@ -243,6 +254,7 @@ void CPathFinder::SolveAStar()
 #endif // DEBUG
 				continue;
 			}
+
 			// calc running dist
 			tmp->runningDist = CalcRunDist(tmp);
 #ifdef DEBUG
@@ -267,6 +279,9 @@ void CPathFinder::SolveAStar()
 				}
 				else
 				{
+					// seen
+					if (live)
+						SetMapSquare(tmp->location.second, tmp->location.first, static_cast<cubeTypes>(mMap[tmp->location.second][tmp->location.first]), cubeStatus::seen);
 					// no add it
 					openList.push_back(move(tmp));
 				}
@@ -277,25 +292,37 @@ void CPathFinder::SolveAStar()
 #endif // DEBUG
 		}
 		// sort openList
-		sort(openList.begin(), openList.end(), CompareCoords);
+		std::sort(openList.begin(), openList.end(), CompareCoords);
 		++NumOfSorts;
 
 		// push current to closedList
 		closedList.push_back(move(current));
 		current.reset(new coords);
 
+		if (live)
+		{
+			pMyEngine->DrawScene();
+			Sleep(1000);
+		}
+
 #ifdef DEBUG // neaten the debug output
 		std::cout << endl;
 
 #endif // DEBUG
 	}
-	// Get a list from end to start
-	ReturnPath(goal);
-	// flip the list
-	reverse(mPath.begin(), mPath.end());
-	// print to xOutput.txt
-	WriteResult();
-
+	if (!found)
+	{
+		std::cout << "Path not found" << endl;
+	}
+	else
+	{
+		// Get a list from end to start
+		ReturnPath(goal);
+		// flip the list
+		reverse(mPath.begin(), mPath.end());
+		// print to xOutput.txt
+		WriteResult();
+	}
 	// output info to xStats.txt
 #ifdef DEBUG // neaten the debug output
 	std::cout << "Number of sorts: " << NumOfSorts <<  endl;

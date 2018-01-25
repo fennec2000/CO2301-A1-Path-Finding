@@ -9,9 +9,15 @@
 #include <memory>		// unique_ptr
 #include <deque>		// deque
 #include <algorithm>	// sort
+#include <TL-Engine.h>
+#include <Windows.h>
 using namespace std;
+using namespace tle;
 
 #define DEBUG
+
+enum cubeTypes { wall, clear, wood, water, start, end, numOfCubeTypes };
+enum cubeStatus { unknown, seen, visited, numOfStatus };
 
 enum dirrection
 {
@@ -35,6 +41,8 @@ private:
 	pair<int, int> mEnd;			// ending point / goal
 	pair<int, int> mMapSize;		// the size of the map as a rectangle
 	vector<pair<int, int>> mPath;	// path from start to end
+	void (*SetMapSquare)(int i, int j, cubeTypes newType, cubeStatus newStatus);
+	I3DEngine* pMyEngine;
 
 	int NumOfSorts;			// counts the number of sorts
 	int NumOfNodesVisited;	// counts the number of nodes visited
@@ -44,7 +52,6 @@ private:
 	// private func
 	void LoadCoords(string givenMapName);	// Loads coords
 	void LoadMap(string givenMapName);		// Loads map
-	void SolveAStar();						// Solve the current map
 	int CalcManDist(pair<int, int> Loc);	// Calc manhattan distance
 	int CalcRunDist(unique_ptr <coords>& givenPoint);	// Calc current distance from start
 	void DisplayMap();									// used to display the map to console for debugging
@@ -53,6 +60,7 @@ private:
 	void DisplayList(deque<unique_ptr<coords>>& myList);	// Display the given list in the console
 	void ReturnPath(unique_ptr <coords>& givenPoint);		// Puts the path from givenPoint to start into mPath
 	void CPathFinder::WriteResult();		// Write the restlts to files xOutput.txt and xStats.txt x = filename
+	
 
 public:
 	CPathFinder(string givenFileName);		// constructor
@@ -66,5 +74,8 @@ public:
 	pair<int, int> GetMapEnd() { return mEnd; };		// returns the end
 	vector<pair<int, int>> GetPath() { return mPath; };	// returns the path
 	void SetMap(string givenFileName);					// Set a new map
+	void SolveAStar(bool live = false);						// Solve the current map
+	void PassFunc(void(*function)(int i, int j, cubeTypes newType, cubeStatus newStatus));
+	void PassEngine(I3DEngine* givenEngine);
 };
 
