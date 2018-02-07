@@ -5,14 +5,10 @@ bool CompareCoords(unique_ptr<coords>& lhs, unique_ptr<coords>& rhs)
 	return lhs->manhattanDist + lhs->runningDist < rhs->manhattanDist + rhs->runningDist;
 }
 
-CPathFinder::CPathFinder(string givenFileName)
+CPathFinder::CPathFinder(I3DEngine* givenEngine, string givenFileName)
 {
+	mpMyEngine = givenEngine;
 	SetMap(givenFileName);
-}
-
-void CPathFinder::PassEngine(I3DEngine* givenEngine)
-{
-	pMyEngine = givenEngine;
 }
 
 void CPathFinder::SetMap(string givenFileName)
@@ -21,6 +17,7 @@ void CPathFinder::SetMap(string givenFileName)
 	NumOfSorts = 0;
 	NumOfNodesVisited = 0;
 	NumOfNodesSeen = 0;
+	currentWaitTime = waitTimer;
 
 	mMap.clear();
 	mPath.clear();
@@ -301,8 +298,13 @@ void CPathFinder::SolveAStar(bool live)
 
 		if (live)
 		{
-			pMyEngine->DrawScene();
-			Sleep(1000);
+			// slow down the solver and show its steps
+			while (currentWaitTime > 0)
+			{
+				mpMyEngine->DrawScene();
+				currentWaitTime -= mpMyEngine->Timer();
+			}
+			currentWaitTime = waitTimer;
 		}
 
 #ifdef DEBUG // neaten the debug output
@@ -321,7 +323,7 @@ void CPathFinder::SolveAStar(bool live)
 		// flip the list
 		reverse(mPath.begin(), mPath.end());
 		// print to xOutput.txt
-		WriteResult();
+		WriteResult(live);
 	}
 	// output info to xStats.txt
 #ifdef DEBUG // neaten the debug output
@@ -391,7 +393,7 @@ void CPathFinder::ReturnPath(unique_ptr <coords>& givenPoint)
 	}
 }
 
-void CPathFinder::WriteResult()
+void CPathFinder::WriteResult(bool live)
 {
 	ofstream myOutput, myStats;
 	myOutput.open("maps/" + fileName + "Output.txt", ios::trunc);
@@ -399,6 +401,9 @@ void CPathFinder::WriteResult()
 	for (vector<pair<int, int>>::iterator it = mPath.begin(); it != mPath.end(); ++it)
 	{
 		myOutput << (*it).first << " " << (*it).second << endl;
+		// if live display path
+		if (live)
+			SetMapSquare((*it).second, (*it).first, static_cast<cubeTypes>(mMap[(*it).second][(*it).first]), cubeStatus::path);
 	}
 	myOutput.close();
 

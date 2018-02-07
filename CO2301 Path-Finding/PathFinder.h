@@ -9,20 +9,19 @@
 #include <memory>		// unique_ptr
 #include <deque>		// deque
 #include <algorithm>	// sort
-#include <TL-Engine.h>
-#include <Windows.h>
+#include <TL-Engine.h>	// tl engine
+#include <Windows.h>	// file system
 using namespace std;
 using namespace tle;
 
 #define DEBUG
 
 enum cubeTypes { wall, clear, wood, water, start, end, numOfCubeTypes };
-enum cubeStatus { unknown, seen, visited, numOfStatus };
+enum cubeStatus { unknown, seen, visited, path, numOfStatus };
+enum dirrection { North, East, South, West, NumberOfDirections };
 
-enum dirrection
-{
-	North = 0, East, South, West, NumberOfDirections
-};
+// class global const
+const float waitTimer = 0.33f;	// time between movement
 
 struct coords
 {
@@ -41,15 +40,16 @@ private:
 	pair<int, int> mEnd;			// ending point / goal
 	pair<int, int> mMapSize;		// the size of the map as a rectangle
 	vector<pair<int, int>> mPath;	// path from start to end
-	void (*SetMapSquare)(int i, int j, cubeTypes newType, cubeStatus newStatus);
-	I3DEngine* pMyEngine;
+	I3DEngine* mpMyEngine;			// pointer to the TL engine
 
 	int NumOfSorts;			// counts the number of sorts
 	int NumOfNodesVisited;	// counts the number of nodes visited
 	int NumOfNodesSeen;		// counts the number of nodes seen
 	string fileName;		// name of the file // the prefix e.g. d - dMaps.txt, dCoords.txt, dOutput.txt, dStats.txt
+	float currentWaitTime;	// current time left to wait, decreases
 
 	// private func
+	void(*SetMapSquare)(int i, int j, cubeTypes newType, cubeStatus newStatus);	// function pointer to the set map square function
 	void LoadCoords(string givenMapName);	// Loads coords
 	void LoadMap(string givenMapName);		// Loads map
 	int CalcManDist(pair<int, int> Loc);	// Calc manhattan distance
@@ -59,11 +59,11 @@ private:
 	void SwapFirstWithCheck(deque<unique_ptr<coords>>& myList, unique_ptr <coords>& givenPoint);	// swap the given point with the first match in the list
 	void DisplayList(deque<unique_ptr<coords>>& myList);	// Display the given list in the console
 	void ReturnPath(unique_ptr <coords>& givenPoint);		// Puts the path from givenPoint to start into mPath
-	void CPathFinder::WriteResult();		// Write the restlts to files xOutput.txt and xStats.txt x = filename
-	
+	void CPathFinder::WriteResult(bool live);		// Write the restlts to files xOutput.txt and xStats.txt x = filename
+
 
 public:
-	CPathFinder(string givenFileName);		// constructor
+	CPathFinder(I3DEngine* givenEngine, string givenFileName);		// constructor
 	~CPathFinder();		// deconstructor
 
 	void Load(string mapName);	// Loads the named map
@@ -76,6 +76,5 @@ public:
 	void SetMap(string givenFileName);					// Set a new map
 	void SolveAStar(bool live = false);						// Solve the current map
 	void PassFunc(void(*function)(int i, int j, cubeTypes newType, cubeStatus newStatus));
-	void PassEngine(I3DEngine* givenEngine);
 };
 
