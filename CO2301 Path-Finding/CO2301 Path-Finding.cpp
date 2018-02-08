@@ -24,16 +24,16 @@ I3DEngine* gpMyEngine; // the tl engine
 
 
 // font
-const int textSize = 24; // text font size
-IFont* myFont; // pointer to tl text
-bool ShowUI = true; // bool to display all ui
-bool ShowMapUI = true; // bool to display map ui
-int mapTestPos; // map text pos, right hand side text
+const int gTEXT_SIZE = 24; // text font size
+IFont* gMyFont; // pointer to tl text
+bool gShowUI = true; // bool to display all ui
+bool gShowMapUI = true; // bool to display map ui
+int gMapTestPos; // map text pos, right hand side text
 // Text to display
-const int NUM_OF_UI_STRINGS = 11;
-string UI_Info[NUM_OF_UI_STRINGS] = { "F1: Hide UI", "F2: Hide Map File", "A: Auto step", "Space: Single step", "L: Live", "S: Change Spline", "Enter: Load Map", "Left Arrow: Previous", "map file", "Right Arrow: Next map", "file" };
-string UI_SplineLine1[EBezeirType::NumOfBezeirTypes] = { "Bezier Spline Rev 1:", "Bezier Spline Rev 2:" };
-string UI_SplineLine2[EBezeirType::NumOfBezeirTypes] = { "Mid Third", "Double Mid" };
+const int gNUM_OF_UI_STRINGS = 11;
+string gUI_INFO[gNUM_OF_UI_STRINGS] = { "F1: Hide UI", "F2: Hide Map File", "A: Auto step", "Space: Single step", "L: Live", "S: Change Spline", "Enter: Load Map", "Left Arrow: Previous", "map file", "Right Arrow: Next map", "file" };
+string gUI_SPLINE_LINE_1[EBezeirType::NumOfBezeirTypes] = { "Bezier Spline Rev 1:", "Bezier Spline Rev 2:" };
+string gUI_SPLINE_LINE_2[EBezeirType::NumOfBezeirTypes] = { "Mid Third", "Double Mid" };
 
 // cubes
 const string gCUBE_SKINS[ECubeStatus::numOfStatus][ECubeTypes::numOfCubeTypes] = {
@@ -45,11 +45,11 @@ const float gCUBE_Y_OFFSET[] = { 0.0f, -5.0f, -4.5f, -5.5f }; // offset from the
 const float gCUBE_SIZE = 10.0f;
 
 // maps
-vector<string> ListOfMaps; // list of maps
-int currentMap = 0; // current map in the list of maps
+vector<string> gListOfMaps; // list of maps
+int gCurrentMap = 0; // current map in the list of maps
 
 // bezeir
-EBezeirType currentBezierType = EBezeirType::DoubleMid;
+EBezeirType gCurrentBezierType = EBezeirType::DoubleMid;
 
 // set a single cube on the map that exists
 void SetMapSquare(int i, int j, ECubeTypes newType, ECubeStatus newStatus)
@@ -77,10 +77,10 @@ void main()
 	gpMyEngine = New3DEngine(kTLX);
 	gpMyEngine->StartWindowed();
 
-	ListOfMaps = GetFiles();
+	gListOfMaps = GetFiles();
 
 	// Pathfinder
-	CPathFinder* pCMyPathFinder = new CPathFinder(gpMyEngine, ListOfMaps[0]);
+	CPathFinder* pCMyPathFinder = new CPathFinder(gpMyEngine, gListOfMaps[0]);
 	pCMyPathFinder->PassSetMapSquare(SetMapSquare);
 	pCMyPathFinder->PassDisplayUI(DisplayUI);
 	pCMyPathFinder->SolveAStar();
@@ -95,7 +95,7 @@ void main()
 	float timeLeftForNextStep = TIME_BETWEEN_STEPS;
 	bool autoStep = false;
 	bool singleStep = false;
-	int currentPoint = -2;
+	size_t currentPoint = -2;
 	vector<pair<int, int>> waypoints = pCMyPathFinder->GetPath();
 	bool displayedFoundPath = false;
 	bool guardMove = false;
@@ -120,8 +120,8 @@ void main()
 
 	/**** Set up your scene here ****/
 	// font
-	myFont = gpMyEngine->LoadFont("Consolas", textSize);
-	mapTestPos = gpMyEngine->GetWidth() % gpMyEngine->GetHeight() * 3 / 4 + gpMyEngine->GetHeight();
+	gMyFont = gpMyEngine->LoadFont("Consolas", gTEXT_SIZE);
+	gMapTestPos = gpMyEngine->GetWidth() % gpMyEngine->GetHeight() * 3 / 4 + gpMyEngine->GetHeight();
 
 	// Meshs
 	IMesh* floorMesh = gpMyEngine->LoadMesh("Floor.x");
@@ -172,18 +172,10 @@ void main()
 	mob->Scale(gCUBE_SIZE); // mob scale base off its surroundings, a cube
 	mob->SetPosition(mapStart.first * gCUBE_SIZE, 0.0f, mapStart.second * gCUBE_SIZE);
 
-	// Camera
-	const int MY_CAMERA_SPEED = 10;
-
 	// myCamera
 	ICamera* myCamera = gpMyEngine->CreateCamera(kManual);
 	myCamera->SetPosition(gCUBE_SIZE * 4.5f, 100.0f, gCUBE_SIZE * 4.5f);
 	myCamera->RotateX(90.0f);
-	myCamera->SetMovementSpeed(2.0f * MY_CAMERA_SPEED);
-	myCamera->SetRotationSpeed(MY_CAMERA_SPEED);
-
-	// hide mouse
-	//gpMyEngine->StartMouseCapture();
 
 	// The main game loop, repeat until engine is stopped
 	while (gpMyEngine->IsRunning())
@@ -286,7 +278,7 @@ void main()
 			}
 			else
 			{
-				switch (currentBezierType)
+				switch (gCurrentBezierType)
 				{
 				case EBezeirType::MidThird:
 					// only used the middle 1/3 and splice the curves together
@@ -367,7 +359,7 @@ void main()
 		// keybindings
 		if (gpMyEngine->KeyHit(liveMapVersion))
 		{
-			pCMyPathFinder->SetMap(ListOfMaps[currentMap]);
+			pCMyPathFinder->SetMap(gListOfMaps[gCurrentMap]);
 			pCMyPathFinder->SolveAStar(true);
 
 			// Reset Data
@@ -398,19 +390,19 @@ void main()
 
 		if (gpMyEngine->KeyHit(nextMapButton))
 		{
-			++currentMap;
-			if (ListOfMaps.size() <= currentMap)
-				currentMap = 0;
+			++gCurrentMap;
+			if (gListOfMaps.size() <= gCurrentMap)
+				gCurrentMap = 0;
 		}
 		if (gpMyEngine->KeyHit(prevMapButton))
 		{
-			--currentMap;
-			if (0 > currentMap)
-				currentMap = ListOfMaps.size() - 1;
+			--gCurrentMap;
+			if (0 > gCurrentMap)
+				gCurrentMap = gListOfMaps.size() - 1;
 		}
 		if (gpMyEngine->KeyHit(loadMapButton))
 		{
-			pCMyPathFinder->SetMap(ListOfMaps[currentMap]);
+			pCMyPathFinder->SetMap(gListOfMaps[gCurrentMap]);
 			pCMyPathFinder->SolveAStar();
 
 			// Stop the auto solve
@@ -473,20 +465,20 @@ void main()
 		}
 		if (gpMyEngine->KeyHit(splineChangeButton))
 		{
-			if (currentBezierType == EBezeirType::DoubleMid)
-				currentBezierType = EBezeirType::MidThird;
+			if (gCurrentBezierType == EBezeirType::DoubleMid)
+				gCurrentBezierType = EBezeirType::MidThird;
 			else
-				currentBezierType = EBezeirType::DoubleMid;
+				gCurrentBezierType = EBezeirType::DoubleMid;
 		}
 
 		// UI
 		if (gpMyEngine->KeyHit(hideUIButton))
 		{
-			ShowUI = !ShowUI;
+			gShowUI = !gShowUI;
 		}
 		if (gpMyEngine->KeyHit(hideMapUIButton))
 		{
-			ShowMapUI = !ShowMapUI;
+			gShowMapUI = !gShowMapUI;
 		}
 
 		// close
@@ -632,25 +624,25 @@ pair<float, float> BezeirRev2(vector<pair<int, int>> &waypoints, int currentPoin
 void DisplayUI(CPathFinder* thePathfinder, bool isWaypointEmpty)
 {
 	// UI
-	if (ShowUI)
+	if (gShowUI)
 	{
-		for (int i = 0; i < NUM_OF_UI_STRINGS; ++i)
+		for (int i = 0; i < gNUM_OF_UI_STRINGS; ++i)
 		{
-			myFont->Draw(UI_Info[i], 0, textSize * i);
+			gMyFont->Draw(gUI_INFO[i], 0, gTEXT_SIZE * i);
 		}
 	}
-	if (ShowMapUI && ShowUI)
+	if (gShowMapUI && gShowUI)
 	{
-		myFont->Draw("Current map:", mapTestPos, 0, kBlack, kCentre);
-		myFont->Draw(ListOfMaps[currentMap], mapTestPos, textSize, kBlack, kCentre);
-		myFont->Draw("Nodes Seen: " + to_string(thePathfinder->GetNodesSeen()), mapTestPos, textSize * 2, kBlack, kCentre);
-		myFont->Draw("Nodes Visited: " + to_string(thePathfinder->GetNodesVisited()), mapTestPos, textSize * 3, kBlack, kCentre);
-		myFont->Draw("Sorts: " + to_string(thePathfinder->GetSorts()), mapTestPos, textSize * 4, kBlack, kCentre);
-		myFont->Draw("Spline:", mapTestPos, textSize * 5, kBlack, kCentre);
-		myFont->Draw(UI_SplineLine1[currentBezierType], mapTestPos, textSize * 6, kBlack, kCentre);
-		myFont->Draw(UI_SplineLine2[currentBezierType], mapTestPos, textSize * 7, kBlack, kCentre);
+		gMyFont->Draw("Current map:", gMapTestPos, 0, kBlack, kCentre);
+		gMyFont->Draw(gListOfMaps[gCurrentMap], gMapTestPos, gTEXT_SIZE, kBlack, kCentre);
+		gMyFont->Draw("Nodes Seen: " + to_string(thePathfinder->GetNodesSeen()), gMapTestPos, gTEXT_SIZE * 2, kBlack, kCentre);
+		gMyFont->Draw("Nodes Visited: " + to_string(thePathfinder->GetNodesVisited()), gMapTestPos, gTEXT_SIZE * 3, kBlack, kCentre);
+		gMyFont->Draw("Sorts: " + to_string(thePathfinder->GetSorts()), gMapTestPos, gTEXT_SIZE * 4, kBlack, kCentre);
+		gMyFont->Draw("Spline:", gMapTestPos, gTEXT_SIZE * 5, kBlack, kCentre);
+		gMyFont->Draw(gUI_SPLINE_LINE_1[gCurrentBezierType], gMapTestPos, gTEXT_SIZE * 6, kBlack, kCentre);
+		gMyFont->Draw(gUI_SPLINE_LINE_2[gCurrentBezierType], gMapTestPos, gTEXT_SIZE * 7, kBlack, kCentre);
 
 		if (isWaypointEmpty)
-			myFont->Draw("No Path Found", mapTestPos, textSize * 8, kBlack, kCentre);
+			gMyFont->Draw("No Path Found", gMapTestPos, gTEXT_SIZE * 8, kBlack, kCentre);
 	}
 }
