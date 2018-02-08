@@ -33,11 +33,15 @@ void CPathFinder::SetMap(string givenFileName)
 #endif // _DEBUG
 }
 
-void CPathFinder::PassFunc(void(*function)(int i, int j, ECubeTypes newType, ECubeStatus newStatus))
+void CPathFinder::PassSetMapSquare(void(*function)(int i, int j, ECubeTypes newType, ECubeStatus newStatus))
 {
 	SetMapSquare = function;
 }
 
+void CPathFinder::PassDisplayUI(void(*function)(CPathFinder* thePathfinder, bool isWaypointEmpty))
+{
+	DisplayUI = function;
+}
 
 CPathFinder::~CPathFinder()
 {
@@ -303,6 +307,7 @@ void CPathFinder::SolveAStar(bool live)
 			{
 				mpMyEngine->DrawScene();
 				mCurrentWaitTime -= mpMyEngine->Timer();
+				DisplayUI(this, !found);
 			}
 			mCurrentWaitTime = waitTimer;
 		}

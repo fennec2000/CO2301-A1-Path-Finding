@@ -16,10 +16,24 @@ void LookAt(Vec3 targetPosition, IModel* myModel);
 vector<string> GetFiles();
 pair<float, float> Bezeir(vector<pair<int, int>> &waypoints, int currentPoint, int splits, int currentSplit, pair<int, int> mapStart);
 pair<float, float> BezeirRev2(vector<pair<int, int>> &waypoints, int currentPoint, int splits, int currentSplit, pair<int, int> mapStart);
+void DisplayUI(CPathFinder* thePathfinder, bool isWaypointEmpty);
 
 // Global
 vector <vector <IModel*>> gCubes; // the map model holder
 I3DEngine* gpMyEngine; // the tl engine
+
+
+// font
+const int textSize = 24; // text font size
+IFont* myFont; // pointer to tl text
+bool ShowUI = true; // bool to display all ui
+bool ShowMapUI = true; // bool to display map ui
+int mapTestPos; // map text pos, right hand side text
+// Text to display
+const int NUM_OF_UI_STRINGS = 11;
+string UI_Info[NUM_OF_UI_STRINGS] = { "F1: Hide UI", "F2: Hide Map File", "A: Auto step", "Space: Single step", "L: Live", "S: Change Spline", "Enter: Load Map", "Left Arrow: Previous", "map file", "Right Arrow: Next map", "file" };
+string UI_SplineLine1[EBezeirType::NumOfBezeirTypes] = { "Bezier Spline Rev 1:", "Bezier Spline Rev 2:" };
+string UI_SplineLine2[EBezeirType::NumOfBezeirTypes] = { "Mid Third", "Double Mid" };
 
 // cubes
 const string gCUBE_SKINS[ECubeStatus::numOfStatus][ECubeTypes::numOfCubeTypes] = {
@@ -29,6 +43,13 @@ const string gCUBE_SKINS[ECubeStatus::numOfStatus][ECubeTypes::numOfCubeTypes] =
 	{ "na", "clear_path.jpg", "wood_path.jpg", "water_path.jpg", "start_path.jpg", "end_path.jpg" }, };
 const float gCUBE_Y_OFFSET[] = { 0.0f, -5.0f, -4.5f, -5.5f }; // offset from the map origin
 const float gCUBE_SIZE = 10.0f;
+
+// maps
+vector<string> ListOfMaps; // list of maps
+int currentMap = 0; // current map in the list of maps
+
+// bezeir
+EBezeirType currentBezierType = EBezeirType::DoubleMid;
 
 // set a single cube on the map that exists
 void SetMapSquare(int i, int j, ECubeTypes newType, ECubeStatus newStatus)
@@ -56,11 +77,12 @@ void main()
 	gpMyEngine = New3DEngine(kTLX);
 	gpMyEngine->StartWindowed();
 
-	vector<string> ListOfMaps = GetFiles();
+	ListOfMaps = GetFiles();
 
 	// Pathfinder
 	CPathFinder* pCMyPathFinder = new CPathFinder(gpMyEngine, ListOfMaps[0]);
-	pCMyPathFinder->PassFunc(SetMapSquare);
+	pCMyPathFinder->PassSetMapSquare(SetMapSquare);
+	pCMyPathFinder->PassDisplayUI(DisplayUI);
 	pCMyPathFinder->SolveAStar();
 
 	// Add default folder for meshes and other media
@@ -78,12 +100,10 @@ void main()
 	bool displayedFoundPath = false;
 	bool guardMove = false;
 	const float EPS = 0.1f;
-	int currentMap = 0;
 	const int NUM_OF_BEZIER_SECTIONS = 10;
 	int currentBezierSection = 0;
 	pair<float, float> BezierWaypoint(-2.0f, -2.0f);
 	bool haveBezierWaypoint = false;
-	EBezeirType currentBezierType = EBezeirType::DoubleMid;
 
 
 	// keybindings
@@ -100,15 +120,8 @@ void main()
 
 	/**** Set up your scene here ****/
 	// font
-	const int textSize = 24;
-	IFont* myFont = gpMyEngine->LoadFont("Consolas", textSize);
-	bool ShowUI = true;
-	bool ShowMapUI = true;
-	int mapTestPos = gpMyEngine->GetWidth() % gpMyEngine->GetHeight() * 3 / 4 + gpMyEngine->GetHeight();
-	const int NUM_OF_UI_STRINGS = 11;
-	string UI_Info[NUM_OF_UI_STRINGS] = { "F1: Hide UI", "F2: Hide Map File", "A: Auto step", "Space: Single step", "L: Live", "S: Change Spline", "Enter: Load Map", "Left Arrow: Previous", "map file", "Right Arrow: Next map", "file" };
-	string UI_SplineLine1[EBezeirType::NumOfBezeirTypes] = { "Bezier Spline Rev 1:", "Bezier Spline Rev 2:" };
-	string UI_SplineLine2[EBezeirType::NumOfBezeirTypes] = { "Mid Third", "Double Mid" };
+	myFont = gpMyEngine->LoadFont("Consolas", textSize);
+	mapTestPos = gpMyEngine->GetWidth() % gpMyEngine->GetHeight() * 3 / 4 + gpMyEngine->GetHeight();
 
 	// Meshs
 	IMesh* floorMesh = gpMyEngine->LoadMesh("Floor.x");
@@ -349,28 +362,7 @@ void main()
 			mob->MoveLocalZ(mobSpeed * frameTimer);
 		}
 
-		// UI
-		if (ShowUI)
-		{
-			for (int i = 0; i < NUM_OF_UI_STRINGS; ++i)
-			{
-				myFont->Draw(UI_Info[i], 0, textSize * i);
-			}
-		}
-		if (ShowMapUI && ShowUI)
-		{
-			myFont->Draw("Current map:", mapTestPos, 0, kBlack, kCentre);
-			myFont->Draw(ListOfMaps[currentMap], mapTestPos, textSize, kBlack, kCentre);
-			myFont->Draw("Nodes Seen: " + to_string(pCMyPathFinder->GetNodesSeen()), mapTestPos, textSize * 2, kBlack, kCentre);
-			myFont->Draw("Nodes Visited: " + to_string(pCMyPathFinder->GetNodesVisited()), mapTestPos, textSize * 3, kBlack, kCentre);
-			myFont->Draw("Sorts: " + to_string(pCMyPathFinder->GetSorts()), mapTestPos, textSize * 4, kBlack, kCentre);
-			myFont->Draw("Spline:", mapTestPos, textSize * 5, kBlack, kCentre);
-			myFont->Draw(UI_SplineLine1[currentBezierType], mapTestPos, textSize * 6, kBlack, kCentre);
-			myFont->Draw(UI_SplineLine2[currentBezierType], mapTestPos, textSize * 7, kBlack, kCentre);
-
-			if (waypoints.empty())
-				myFont->Draw("No Path Found", mapTestPos, textSize * 8, kBlack, kCentre);
-		}
+		DisplayUI(pCMyPathFinder, waypoints.empty());
 
 		// keybindings
 		if (gpMyEngine->KeyHit(liveMapVersion))
@@ -635,4 +627,30 @@ pair<float, float> BezeirRev2(vector<pair<int, int>> &waypoints, int currentPoin
 		ans.first = BezeirFormula(currentSplit / static_cast<float>(splits), waypoints[currentPoint - 1].first, waypoints[currentPoint].first, waypoints[currentPoint].first, waypoints[currentPoint + 1].first);
 	}
 	return ans;
+}
+
+void DisplayUI(CPathFinder* thePathfinder, bool isWaypointEmpty)
+{
+	// UI
+	if (ShowUI)
+	{
+		for (int i = 0; i < NUM_OF_UI_STRINGS; ++i)
+		{
+			myFont->Draw(UI_Info[i], 0, textSize * i);
+		}
+	}
+	if (ShowMapUI && ShowUI)
+	{
+		myFont->Draw("Current map:", mapTestPos, 0, kBlack, kCentre);
+		myFont->Draw(ListOfMaps[currentMap], mapTestPos, textSize, kBlack, kCentre);
+		myFont->Draw("Nodes Seen: " + to_string(thePathfinder->GetNodesSeen()), mapTestPos, textSize * 2, kBlack, kCentre);
+		myFont->Draw("Nodes Visited: " + to_string(thePathfinder->GetNodesVisited()), mapTestPos, textSize * 3, kBlack, kCentre);
+		myFont->Draw("Sorts: " + to_string(thePathfinder->GetSorts()), mapTestPos, textSize * 4, kBlack, kCentre);
+		myFont->Draw("Spline:", mapTestPos, textSize * 5, kBlack, kCentre);
+		myFont->Draw(UI_SplineLine1[currentBezierType], mapTestPos, textSize * 6, kBlack, kCentre);
+		myFont->Draw(UI_SplineLine2[currentBezierType], mapTestPos, textSize * 7, kBlack, kCentre);
+
+		if (isWaypointEmpty)
+			myFont->Draw("No Path Found", mapTestPos, textSize * 8, kBlack, kCentre);
+	}
 }

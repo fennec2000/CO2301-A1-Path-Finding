@@ -50,6 +50,7 @@ private:
 
 	// private func
 	void(*SetMapSquare)(int i, int j, ECubeTypes newType, ECubeStatus newStatus);	// function pointer to the set map square function
+	void(*DisplayUI)(CPathFinder* thePathfinder, bool isWaypointEmpty);	// function pointer to display the ui on the screen
 	void LoadCoords(string givenMapName);	// Loads coords
 	void LoadMap(string givenMapName);		// Loads map
 	int CalcManDist(pair<int, int> Loc);	// Calc manhattan distance
@@ -75,7 +76,8 @@ public:
 	vector<pair<int, int>> GetPath() { return mPath; };	// returns the path
 	void SetMap(string givenFileName);					// Set a new map
 	void SolveAStar(bool live = false);						// Solve the current map
-	void PassFunc(void(*function)(int i, int j, ECubeTypes newType, ECubeStatus newStatus));	// Pass the SetMapSquare function to the class
+	void PassSetMapSquare(void(*function)(int i, int j, ECubeTypes newType, ECubeStatus newStatus));	// Pass the SetMapSquare function to the class
+	void PassDisplayUI(void(*function)(CPathFinder* thePathfinder, bool isWaypointEmpty));				// Pass the DisplayUI function to the class
 	int GetSorts() { return mNumOfSorts; };					// returns the number of sorts in the algorithem
 	int GetNodesVisited() { return mNumOfNodesVisited; };	// returns the number of nodes visited
 	int GetNodesSeen() { return mNumOfNodesSeen; };			// returns the number of nodes seen
