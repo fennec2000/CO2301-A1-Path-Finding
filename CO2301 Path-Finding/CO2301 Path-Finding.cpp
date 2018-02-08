@@ -14,24 +14,25 @@ vector<string> GetFiles();
 pair<float, float> Bezeir(vector<pair<int, int>> &waypoints, int currentPoint, int splits, int currentSplit, pair<int, int> mapStart);
 
 // Global
-vector <vector <IModel*>> gCubes;
-I3DEngine* gpMyEngine;
+vector <vector <IModel*>> gCubes; // the map model holder
+I3DEngine* gpMyEngine; // the tl engine
 
 // cubes
-const string gCUBE_SKINS[cubeStatus::numOfStatus][cubeTypes::numOfCubeTypes] = {
+const string gCUBE_SKINS[ECubeStatus::numOfStatus][ECubeTypes::numOfCubeTypes] = {
 	{ "wall.jpg", "clear.jpg", "wood.jpg", "water.jpg", "start.jpg", "end.jpg" },
 	{ "na", "clear_seen.jpg", "wood_seen.jpg", "water_seen.jpg", "start_seen.jpg", "end_seen.jpg" },
 	{ "na", "clear_visited.jpg", "wood_visited.jpg", "water_visited.jpg", "start_visited.jpg", "end_visited.jpg" },
 	{ "na", "clear_path.jpg", "wood_path.jpg", "water_path.jpg", "start_path.jpg", "end_path.jpg" }, };
-const float gCUBE_Y_OFFSET[] = { 0.0f, -5.0f, -4.5f, -5.5f };
+const float gCUBE_Y_OFFSET[] = { 0.0f, -5.0f, -4.5f, -5.5f }; // offset from the map origin
 const float gCUBE_SIZE = 10.0f;
 
-void SetMapSquare(int i, int j, cubeTypes newType, cubeStatus newStatus)
+// set a single cube on the map that exists
+void SetMapSquare(int i, int j, ECubeTypes newType, ECubeStatus newStatus)
 {
-	if (newStatus < cubeTypes::numOfCubeTypes)
+	if (newStatus < ECubeTypes::numOfCubeTypes)
 	{
-		if (cubeTypes::start == newType || cubeTypes::end == newType)
-			gCubes[i][j]->SetPosition(j * gCUBE_SIZE, gCUBE_Y_OFFSET[cubeTypes::clear], i * gCUBE_SIZE);
+		if (ECubeTypes::start == newType || ECubeTypes::end == newType)
+			gCubes[i][j]->SetPosition(j * gCUBE_SIZE, gCUBE_Y_OFFSET[ECubeTypes::clear], i * gCUBE_SIZE);
 		else
 			gCubes[i][j]->SetPosition(j * gCUBE_SIZE, gCUBE_Y_OFFSET[newType], i * gCUBE_SIZE);
 
@@ -122,22 +123,22 @@ void main()
 			IModel* tmpCubeModel;
 
 
-			if (cubeTypes::start == map[i][j] || cubeTypes::end == map[i][j])
-				tmpCubeModel = cubeMesh->CreateModel(j * gCUBE_SIZE, gCUBE_Y_OFFSET[cubeTypes::clear], i * gCUBE_SIZE);
+			if (ECubeTypes::start == map[i][j] || ECubeTypes::end == map[i][j])
+				tmpCubeModel = cubeMesh->CreateModel(j * gCUBE_SIZE, gCUBE_Y_OFFSET[ECubeTypes::clear], i * gCUBE_SIZE);
 			else
 				tmpCubeModel = cubeMesh->CreateModel(j * gCUBE_SIZE, gCUBE_Y_OFFSET[map[i][j]], i * gCUBE_SIZE);
 
-			tmpCubeModel->SetSkin(gCUBE_SKINS[cubeStatus::unknown][map[i][j]]);
+			tmpCubeModel->SetSkin(gCUBE_SKINS[ECubeStatus::unknown][map[i][j]]);
 			tmpCubes.push_back(tmpCubeModel);
 		}
 		gCubes.push_back(tmpCubes);
 	}
 
 	// set the start
-	SetMapSquare(mapStart.second, mapStart.first, cubeTypes::start, cubeStatus::unknown);
+	SetMapSquare(mapStart.second, mapStart.first, ECubeTypes::start, ECubeStatus::unknown);
 
 	// set the end
-	SetMapSquare(mapEnd.second, mapEnd.first, cubeTypes::end, cubeStatus::unknown);
+	SetMapSquare(mapEnd.second, mapEnd.first, ECubeTypes::end, ECubeStatus::unknown);
 
 	// mob variables
 	float mobSpeed = 1.0f;
@@ -185,25 +186,25 @@ void main()
 			else
 				currentWaypath = waypoints[currentPoint];
 
-			gCubes[currentWaypath.second][currentWaypath.first]->SetSkin(gCUBE_SKINS[cubeStatus::path][map[currentWaypath.second][currentWaypath.first] % cubeTypes::numOfCubeTypes]);
-			map[currentWaypath.second][currentWaypath.first] += cubeTypes::numOfCubeTypes * cubeStatus::path;
+			gCubes[currentWaypath.second][currentWaypath.first]->SetSkin(gCUBE_SKINS[ECubeStatus::path][map[currentWaypath.second][currentWaypath.first] % ECubeTypes::numOfCubeTypes]);
+			map[currentWaypath.second][currentWaypath.first] += ECubeTypes::numOfCubeTypes * ECubeStatus::path;
 
 			pair<int, int> tmp;
-			for (int i = 0; i < dirrection::NumberOfDirections; ++i)
+			for (int i = 0; i < EDirrection::NumberOfDirections; ++i)
 			{
 				tmp = currentWaypath;
 				switch (i)
 				{
-				case dirrection::North:
+				case EDirrection::North:
 					++(tmp.second);
 					break;
-				case dirrection::East:
+				case EDirrection::East:
 					++(tmp.first);
 					break;
-				case dirrection::South:
+				case EDirrection::South:
 					--(tmp.second);
 					break;
-				case dirrection::West:
+				case EDirrection::West:
 					--(tmp.first);
 					break;
 				default:
@@ -220,23 +221,23 @@ void main()
 				}
 
 				// if wall ignore
-				if (map[tmp.second][tmp.first] % cubeTypes::numOfCubeTypes == cubeTypes::wall)
+				if (map[tmp.second][tmp.first] % ECubeTypes::numOfCubeTypes == ECubeTypes::wall)
 					continue;
 
 				if (tmp == mapEnd) // found the goal
 				{
 					displayedFoundPath = true;
 					guardMove = true;
-					gCubes[tmp.second][tmp.first]->SetSkin(gCUBE_SKINS[cubeStatus::path][map[tmp.second][tmp.first] % cubeTypes::numOfCubeTypes]);
-					map[tmp.second][tmp.first] += cubeTypes::numOfCubeTypes * cubeStatus::path;
+					gCubes[tmp.second][tmp.first]->SetSkin(gCUBE_SKINS[ECubeStatus::path][map[tmp.second][tmp.first] % ECubeTypes::numOfCubeTypes]);
+					map[tmp.second][tmp.first] += ECubeTypes::numOfCubeTypes * ECubeStatus::path;
 					currentPoint = 0;
 				}
 
 				// if not visited set visited
-				if (map[tmp.second][tmp.first] / cubeTypes::numOfCubeTypes < 1)
+				if (map[tmp.second][tmp.first] / ECubeTypes::numOfCubeTypes < 1)
 				{
-					gCubes[tmp.second][tmp.first]->SetSkin(gCUBE_SKINS[cubeStatus::seen][map[tmp.second][tmp.first] % cubeTypes::numOfCubeTypes]);
-					map[tmp.second][tmp.first] += cubeTypes::numOfCubeTypes;
+					gCubes[tmp.second][tmp.first]->SetSkin(gCUBE_SKINS[ECubeStatus::seen][map[tmp.second][tmp.first] % ECubeTypes::numOfCubeTypes]);
+					map[tmp.second][tmp.first] += ECubeTypes::numOfCubeTypes;
 				}
 			}
 		}
@@ -263,6 +264,7 @@ void main()
 			}
 			else
 			{
+				// only used the middle 1/3 and splice the curves together
 				if (std::floorf(NUM_OF_BEZIER_SECTIONS * 0.6f) <= currentBezierSection)
 				{
 					++currentPoint;
@@ -305,8 +307,11 @@ void main()
 		{
 			myFont->Draw("Current map:", mapTestPos, 0, kBlack, kCentre);
 			myFont->Draw(ListOfMaps[currentMap], mapTestPos, textSize, kBlack, kCentre);
+			myFont->Draw("Nodes Seen: " + to_string(pCMyPathFinder->GetNodesSeen()), mapTestPos, textSize * 2, kBlack, kCentre);
+			myFont->Draw("Nodes Visited: " + to_string(pCMyPathFinder->GetNodesVisited()), mapTestPos, textSize * 3, kBlack, kCentre);
+			myFont->Draw("Sorts: " + to_string(pCMyPathFinder->GetSorts()), mapTestPos, textSize * 4, kBlack, kCentre);
 			if (waypoints.empty())
-				myFont->Draw("No Path Found", mapTestPos, textSize * 2, kBlack, kCentre);
+				myFont->Draw("No Path Found", mapTestPos, textSize * 5, kBlack, kCentre);
 		}
 
 		// keybindings
@@ -403,15 +408,15 @@ void main()
 						gCubes[i].push_back(tmpCubeModel);
 					}
 
-					SetMapSquare(i, j, static_cast<cubeTypes>(map[i][j]), cubeStatus::unknown);
+					SetMapSquare(i, j, static_cast<ECubeTypes>(map[i][j]), ECubeStatus::unknown);
 				}
 			}
 
 			// set the start
-			SetMapSquare(mapStart.second, mapStart.first, cubeTypes::start, cubeStatus::unknown);
+			SetMapSquare(mapStart.second, mapStart.first, ECubeTypes::start, ECubeStatus::unknown);
 
 			// set the end
-			SetMapSquare(mapEnd.second, mapEnd.first, cubeTypes::end, cubeStatus::unknown);
+			SetMapSquare(mapEnd.second, mapEnd.first, ECubeTypes::end, ECubeStatus::unknown);
 
 			// Reset mob
 			mob->SetPosition(mapStart.first * gCUBE_SIZE, 0.0f, mapStart.second * gCUBE_SIZE);
@@ -478,6 +483,7 @@ bool EndsWith(string test, string ending)
 	return false;
 }
 
+// Detects if both files of the back exist
 vector<string> GetFiles()
 {
 	vector<string> MapsFound;
@@ -509,11 +515,13 @@ vector<string> GetFiles()
 	return MapsFound;
 }
 
+// bezeirs cubic formula
 float BezeirFormula(float t, float p1x, float p2x, float p3x, float p4x)
 {
 	return (1 - t) * (1 - t) * (1 - t) * p1x + 3 * t * (1 - t) * (1 - t) * p2x + 3 * t * t * (1 - t) * p3x + t * t * t * p4x;
 }
 
+// get point on a bezeir curve given time [currentSplit / splits]
 pair<float, float> Bezeir(vector<pair<int, int>> &waypoints, int currentPoint, int splits, int currentSplit, pair<int, int> mapStart)
 {
 	pair<float, float> ans;

@@ -16,9 +16,9 @@ using namespace tle;
 
 #define DEBUG
 
-enum cubeTypes { wall, clear, wood, water, start, end, numOfCubeTypes };
-enum cubeStatus { unknown, seen, visited, path, numOfStatus };
-enum dirrection { North, East, South, West, NumberOfDirections };
+enum ECubeTypes { wall, clear, wood, water, start, end, numOfCubeTypes };
+enum ECubeStatus { unknown, seen, visited, path, numOfStatus };
+enum EDirrection { North, East, South, West, NumberOfDirections };
 
 // class global const
 const float waitTimer = 0.33f;	// time between movement
@@ -42,14 +42,14 @@ private:
 	vector<pair<int, int>> mPath;	// path from start to end
 	I3DEngine* mpMyEngine;			// pointer to the TL engine
 
-	int NumOfSorts;			// counts the number of sorts
-	int NumOfNodesVisited;	// counts the number of nodes visited
-	int NumOfNodesSeen;		// counts the number of nodes seen
-	string fileName;		// name of the file // the prefix e.g. d - dMaps.txt, dCoords.txt, dOutput.txt, dStats.txt
-	float currentWaitTime;	// current time left to wait, decreases
+	int mNumOfSorts;			// counts the number of sorts
+	int mNumOfNodesVisited;	// counts the number of nodes visited
+	int mNumOfNodesSeen;		// counts the number of nodes seen
+	string mFileName;		// name of the file // the prefix e.g. d - dMaps.txt, dCoords.txt, dOutput.txt, dStats.txt
+	float mCurrentWaitTime;	// current time left to wait, decreases
 
 	// private func
-	void(*SetMapSquare)(int i, int j, cubeTypes newType, cubeStatus newStatus);	// function pointer to the set map square function
+	void(*SetMapSquare)(int i, int j, ECubeTypes newType, ECubeStatus newStatus);	// function pointer to the set map square function
 	void LoadCoords(string givenMapName);	// Loads coords
 	void LoadMap(string givenMapName);		// Loads map
 	int CalcManDist(pair<int, int> Loc);	// Calc manhattan distance
@@ -75,6 +75,9 @@ public:
 	vector<pair<int, int>> GetPath() { return mPath; };	// returns the path
 	void SetMap(string givenFileName);					// Set a new map
 	void SolveAStar(bool live = false);						// Solve the current map
-	void PassFunc(void(*function)(int i, int j, cubeTypes newType, cubeStatus newStatus));
+	void PassFunc(void(*function)(int i, int j, ECubeTypes newType, ECubeStatus newStatus));	// Pass the SetMapSquare function to the class
+	int GetSorts() { return mNumOfSorts; };					// returns the number of sorts in the algorithem
+	int GetNodesVisited() { return mNumOfNodesVisited; };	// returns the number of nodes visited
+	int GetNodesSeen() { return mNumOfNodesSeen; };			// returns the number of nodes seen
 };
 

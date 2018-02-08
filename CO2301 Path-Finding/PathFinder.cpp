@@ -14,16 +14,16 @@ CPathFinder::CPathFinder(I3DEngine* givenEngine, string givenFileName)
 void CPathFinder::SetMap(string givenFileName)
 {
 	// Reset the stats
-	NumOfSorts = 0;
-	NumOfNodesVisited = 0;
-	NumOfNodesSeen = 0;
-	currentWaitTime = waitTimer;
+	mNumOfSorts = 0;
+	mNumOfNodesVisited = 0;
+	mNumOfNodesSeen = 0;
+	mCurrentWaitTime = waitTimer;
 
 	mMap.clear();
 	mPath.clear();
 
-	fileName = givenFileName;
-	Load(fileName);
+	mFileName = givenFileName;
+	Load(mFileName);
 
 #ifdef DEBUG
 	std::cout << "Start: x: " << mStart.first << " y: " << mStart.second << endl;
@@ -33,7 +33,7 @@ void CPathFinder::SetMap(string givenFileName)
 #endif // _DEBUG
 }
 
-void CPathFinder::PassFunc(void(*function)(int i, int j, cubeTypes newType, cubeStatus newStatus))
+void CPathFinder::PassFunc(void(*function)(int i, int j, ECubeTypes newType, ECubeStatus newStatus))
 {
 	SetMapSquare = function;
 }
@@ -116,8 +116,8 @@ void CPathFinder::LoadMap(string givenMapName)
 	mMapSize.first = longestRow;
 	mMapSize.second = mMap.size();
 	std::reverse(mMap.begin(), mMap.end());
-	mMap[mStart.second][mStart.first] = cubeTypes::start;
-	mMap[mEnd.second][mEnd.first] = cubeTypes::end;
+	mMap[mStart.second][mStart.first] = ECubeTypes::start;
+	mMap[mEnd.second][mEnd.first] = ECubeTypes::end;
 }
 
 void CPathFinder::DisplayMap()
@@ -166,9 +166,9 @@ void CPathFinder::SolveAStar(bool live)
 #endif // DEBUG
 
 		// count node has visited
-		++NumOfNodesVisited;
+		++mNumOfNodesVisited;
 		if(live)
-			SetMapSquare(current->location.second, current->location.first, static_cast<cubeTypes>(mMap[current->location.second][current->location.first]), cubeStatus::visited);
+			SetMapSquare(current->location.second, current->location.first, static_cast<ECubeTypes>(mMap[current->location.second][current->location.first]), ECubeStatus::visited);
 
 		// is goal?
 		if (current->location.first == mEnd.first && current->location.second == mEnd.second)
@@ -184,7 +184,7 @@ void CPathFinder::SolveAStar(bool live)
 		}
 
 		// check arround
-		for (int i = 0; i < dirrection::NumberOfDirections; ++i)
+		for (int i = 0; i < EDirrection::NumberOfDirections; ++i)
 		{
 			// reset tmp // start with a new tmp
 			tmp.reset(new coords);
@@ -195,16 +195,16 @@ void CPathFinder::SolveAStar(bool live)
 
 			switch (i)
 			{
-			case dirrection::North:
+			case EDirrection::North:
 				++(tmp->location.second);
 				break;
-			case dirrection::East:
+			case EDirrection::East:
 				++(tmp->location.first);
 				break;
-			case dirrection::South:
+			case EDirrection::South:
 				--(tmp->location.second);
 				break;
-			case dirrection::West:
+			case EDirrection::West:
 				--(tmp->location.first);
 				break;
 			default:
@@ -226,7 +226,7 @@ void CPathFinder::SolveAStar(bool live)
 #endif // DEBUG
 
 			// valid node so we see it
-			++NumOfNodesSeen;
+			++mNumOfNodesSeen;
 
 			// is goal?
 			if (tmp->location.first == mEnd.first && tmp->location.second == mEnd.second)
@@ -236,7 +236,7 @@ void CPathFinder::SolveAStar(bool live)
 				std::cout << endl << "***End found***" << endl;
 #endif // DEBUG
 				if(live)
-					SetMapSquare(tmp->location.second, tmp->location.first, cubeTypes::end, cubeStatus::visited);
+					SetMapSquare(tmp->location.second, tmp->location.first, ECubeTypes::end, ECubeStatus::visited);
 				goal = move(tmp);
 				found = true;
 				break; // goal found
@@ -278,7 +278,7 @@ void CPathFinder::SolveAStar(bool live)
 				{
 					// seen
 					if (live)
-						SetMapSquare(tmp->location.second, tmp->location.first, static_cast<cubeTypes>(mMap[tmp->location.second][tmp->location.first]), cubeStatus::seen);
+						SetMapSquare(tmp->location.second, tmp->location.first, static_cast<ECubeTypes>(mMap[tmp->location.second][tmp->location.first]), ECubeStatus::seen);
 					// no add it
 					openList.push_back(move(tmp));
 				}
@@ -290,7 +290,7 @@ void CPathFinder::SolveAStar(bool live)
 		}
 		// sort openList
 		std::sort(openList.begin(), openList.end(), CompareCoords);
-		++NumOfSorts;
+		++mNumOfSorts;
 
 		// push current to closedList
 		closedList.push_back(move(current));
@@ -299,12 +299,12 @@ void CPathFinder::SolveAStar(bool live)
 		if (live)
 		{
 			// slow down the solver and show its steps
-			while (currentWaitTime > 0)
+			while (mCurrentWaitTime > 0)
 			{
 				mpMyEngine->DrawScene();
-				currentWaitTime -= mpMyEngine->Timer();
+				mCurrentWaitTime -= mpMyEngine->Timer();
 			}
-			currentWaitTime = waitTimer;
+			mCurrentWaitTime = waitTimer;
 		}
 
 #ifdef DEBUG // neaten the debug output
@@ -327,7 +327,7 @@ void CPathFinder::SolveAStar(bool live)
 	}
 	// output info to xStats.txt
 #ifdef DEBUG // neaten the debug output
-	std::cout << "Number of sorts: " << NumOfSorts <<  endl;
+	std::cout << "Number of sorts: " << mNumOfSorts <<  endl;
 	std::cout << "openList: " << endl;
 	DisplayList(openList);
 	std::cout << "closedList: " << endl;
@@ -396,20 +396,20 @@ void CPathFinder::ReturnPath(unique_ptr <coords>& givenPoint)
 void CPathFinder::WriteResult(bool live)
 {
 	ofstream myOutput, myStats;
-	myOutput.open("maps/" + fileName + "Output.txt", ios::trunc);
+	myOutput.open("maps/" + mFileName + "Output.txt", ios::trunc);
 
 	for (vector<pair<int, int>>::iterator it = mPath.begin(); it != mPath.end(); ++it)
 	{
 		myOutput << (*it).first << " " << (*it).second << endl;
 		// if live display path
 		if (live)
-			SetMapSquare((*it).second, (*it).first, static_cast<cubeTypes>(mMap[(*it).second][(*it).first]), cubeStatus::path);
+			SetMapSquare((*it).second, (*it).first, static_cast<ECubeTypes>(mMap[(*it).second][(*it).first]), ECubeStatus::path);
 	}
 	myOutput.close();
 
-	myStats.open("maps/" + fileName + "Stats.txt", ios::trunc);
-	myStats << "Number of sorts: " << NumOfSorts << endl;
-	myStats << "Nodes visited: " << NumOfNodesVisited << endl;
-	myStats << "Nodes seen: " << NumOfNodesSeen << endl;
+	myStats.open("maps/" + mFileName + "Stats.txt", ios::trunc);
+	myStats << "Number of sorts: " << mNumOfSorts << endl;
+	myStats << "Nodes visited: " << mNumOfNodesVisited << endl;
+	myStats << "Nodes seen: " << mNumOfNodesSeen << endl;
 	myStats.close();
 }
