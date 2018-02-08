@@ -8,10 +8,14 @@
 #include <filesystem>	// filesystem
 using namespace tle;
 
+// Enum
+enum EBezeirType { MidThird, DoubleMid, NumOfBezeirTypes };
+
 // declarations
 void LookAt(Vec3 targetPosition, IModel* myModel);
 vector<string> GetFiles();
 pair<float, float> Bezeir(vector<pair<int, int>> &waypoints, int currentPoint, int splits, int currentSplit, pair<int, int> mapStart);
+pair<float, float> BezeirRev2(vector<pair<int, int>> &waypoints, int currentPoint, int splits, int currentSplit, pair<int, int> mapStart);
 
 // Global
 vector <vector <IModel*>> gCubes; // the map model holder
@@ -65,7 +69,7 @@ void main()
 
 	// Varables
 	float frameTimer = 0.0f;
-	const float TIME_BETWEEN_STEPS = 1.00f;
+	const float TIME_BETWEEN_STEPS = 0.33f;
 	float timeLeftForNextStep = TIME_BETWEEN_STEPS;
 	bool autoStep = false;
 	bool singleStep = false;
@@ -76,9 +80,11 @@ void main()
 	const float EPS = 0.1f;
 	int currentMap = 0;
 	const int NUM_OF_BEZIER_SECTIONS = 10;
-	int currentBezierSection = 1;
+	int currentBezierSection = 0;
 	pair<float, float> BezierWaypoint(-2.0f, -2.0f);
 	bool haveBezierWaypoint = false;
+	EBezeirType currentBezierType = EBezeirType::DoubleMid;
+
 
 	// keybindings
 	EKeyCode buttonClose = Key_Escape;	// quit key
@@ -90,6 +96,7 @@ void main()
 	EKeyCode prevMapButton = Key_Left;	// Previous map button
 	EKeyCode loadMapButton = Key_Return;	// Load the current map
 	EKeyCode liveMapVersion = Key_L;	// Live key
+	EKeyCode splineChangeButton = Key_S;	// Change current spline
 
 	/**** Set up your scene here ****/
 	// font
@@ -98,8 +105,10 @@ void main()
 	bool ShowUI = true;
 	bool ShowMapUI = true;
 	int mapTestPos = gpMyEngine->GetWidth() % gpMyEngine->GetHeight() * 3 / 4 + gpMyEngine->GetHeight();
-	const int numOfUI = 10;
-	string UI_Info[numOfUI] = { "F1: Hide UI", "F2: Hide Map File", "A: Auto step", "Space: Single step", "L: Live", "Enter: Load Map", "Left Arrow: Previous", "map file", "Right Arrow: Next map", "file" };
+	const int NUM_OF_UI_STRINGS = 11;
+	string UI_Info[NUM_OF_UI_STRINGS] = { "F1: Hide UI", "F2: Hide Map File", "A: Auto step", "Space: Single step", "L: Live", "S: Change Spline", "Enter: Load Map", "Left Arrow: Previous", "map file", "Right Arrow: Next map", "file" };
+	string UI_SplineLine1[EBezeirType::NumOfBezeirTypes] = { "Bezier Spline Rev 1:", "Bezier Spline Rev 2:" };
+	string UI_SplineLine2[EBezeirType::NumOfBezeirTypes] = { "Mid Third", "Double Mid" };
 
 	// Meshs
 	IMesh* floorMesh = gpMyEngine->LoadMesh("Floor.x");
@@ -264,32 +273,77 @@ void main()
 			}
 			else
 			{
-				// only used the middle 1/3 and splice the curves together
-				if (std::floorf(NUM_OF_BEZIER_SECTIONS * 0.6f) <= currentBezierSection)
+				switch (currentBezierType)
 				{
-					++currentPoint;
-					currentBezierSection = std::ceilf(NUM_OF_BEZIER_SECTIONS * 0.3f);
-					haveBezierWaypoint = false;
+				case EBezeirType::MidThird:
+					// only used the middle 1/3 and splice the curves together
+					if (std::floorf(NUM_OF_BEZIER_SECTIONS * 0.6f) <= currentBezierSection)
+					{
+						++currentPoint;
+						currentBezierSection = std::ceilf(NUM_OF_BEZIER_SECTIONS * 0.3f);
+						haveBezierWaypoint = false;
+					}
+
+					if (!haveBezierWaypoint)
+					{
+						BezierWaypoint = Bezeir(waypoints, currentPoint, NUM_OF_BEZIER_SECTIONS, currentBezierSection, mapStart);
+						cout << "wp: " << waypoints[currentPoint].first << ", " << waypoints[currentPoint].second << " step: " << currentBezierSection / static_cast<float>(NUM_OF_BEZIER_SECTIONS) << ", Bez: " << BezierWaypoint.first << ", " << BezierWaypoint.second << endl;
+						haveBezierWaypoint = true;
+					}
+
+
+					if (mobPos.first < BezierWaypoint.first * gCUBE_SIZE + EPS && mobPos.first > BezierWaypoint.first * gCUBE_SIZE - EPS &&
+						mobPos.second < BezierWaypoint.second * gCUBE_SIZE + EPS && mobPos.second > BezierWaypoint.second * gCUBE_SIZE - EPS)
+					{
+						++currentBezierSection;
+						haveBezierWaypoint = false;
+
+
+					}
+
+					LookAt(Vec3(BezierWaypoint.first * gCUBE_SIZE, halfMobHieght, BezierWaypoint.second * gCUBE_SIZE), mob);
+					break;
+				case EBezeirType::DoubleMid:
+					if (currentPoint > 0 && !(waypoints[currentPoint + 1].first == waypoints[currentPoint - 1].first || waypoints[currentPoint + 1].second == waypoints[currentPoint - 1].second) ||
+						currentPoint == 0 && !(waypoints[currentPoint + 1].first == mapStart.first || waypoints[currentPoint + 1].second == mapStart.second))
+					{
+						if (currentBezierSection == NUM_OF_BEZIER_SECTIONS)
+						{
+							currentPoint += 2;
+							currentBezierSection = 0;
+							haveBezierWaypoint = false;
+							break;
+						}
+
+						if (!haveBezierWaypoint)
+						{
+							BezierWaypoint = BezeirRev2(waypoints, currentPoint, NUM_OF_BEZIER_SECTIONS, currentBezierSection, mapStart);
+							cout << "wp: " << waypoints[currentPoint].first << ", " << waypoints[currentPoint].second << " step: " << currentBezierSection / static_cast<float>(NUM_OF_BEZIER_SECTIONS) << ", Bez: " << BezierWaypoint.first << ", " << BezierWaypoint.second << endl;
+							haveBezierWaypoint = true;
+						}
+
+						if (mobPos.first < BezierWaypoint.first * gCUBE_SIZE + EPS && mobPos.first > BezierWaypoint.first * gCUBE_SIZE - EPS &&
+							mobPos.second < BezierWaypoint.second * gCUBE_SIZE + EPS && mobPos.second > BezierWaypoint.second * gCUBE_SIZE - EPS)
+						{
+							++currentBezierSection;
+							haveBezierWaypoint = false;
+						}
+						LookAt(Vec3(BezierWaypoint.first * gCUBE_SIZE, halfMobHieght, BezierWaypoint.second * gCUBE_SIZE), mob);
+					}
+					else
+					{
+						if (mobPos.first < waypoints[currentPoint].first * gCUBE_SIZE + EPS && mobPos.first > waypoints[currentPoint].first * gCUBE_SIZE - EPS &&
+							mobPos.second < waypoints[currentPoint].second * gCUBE_SIZE + EPS && mobPos.second > waypoints[currentPoint].second * gCUBE_SIZE - EPS)
+						{
+							++currentPoint;
+						}
+						LookAt(Vec3(waypoints[currentPoint].first * gCUBE_SIZE, halfMobHieght, waypoints[currentPoint].second * gCUBE_SIZE), mob);
+					}
+					break;
+				default:
+					break;
 				}
 
-				if (!haveBezierWaypoint)
-				{
-					BezierWaypoint = Bezeir(waypoints, currentPoint, NUM_OF_BEZIER_SECTIONS, currentBezierSection, mapStart);
-					cout << "wp: " << waypoints[currentPoint].first << ", " << waypoints[currentPoint].second << " step: " << currentBezierSection / static_cast<float>(NUM_OF_BEZIER_SECTIONS) << ", Bez: " << BezierWaypoint.first << ", " << BezierWaypoint.second << endl;
-					haveBezierWaypoint = true;
-				}
-
-
-				if (mobPos.first < BezierWaypoint.first * gCUBE_SIZE + EPS && mobPos.first > BezierWaypoint.first * gCUBE_SIZE - EPS &&
-					mobPos.second < BezierWaypoint.second * gCUBE_SIZE + EPS && mobPos.second > BezierWaypoint.second * gCUBE_SIZE - EPS)
-				{
-					++currentBezierSection;
-					haveBezierWaypoint = false;
-
-
-				}
-
-				LookAt(Vec3(BezierWaypoint.first * gCUBE_SIZE, halfMobHieght, BezierWaypoint.second * gCUBE_SIZE), mob);
 			}
 			mob->Scale(gCUBE_SIZE);
 			mob->MoveLocalZ(mobSpeed * frameTimer);
@@ -298,7 +352,7 @@ void main()
 		// UI
 		if (ShowUI)
 		{
-			for (int i = 0; i < numOfUI; ++i)
+			for (int i = 0; i < NUM_OF_UI_STRINGS; ++i)
 			{
 				myFont->Draw(UI_Info[i], 0, textSize * i);
 			}
@@ -310,8 +364,12 @@ void main()
 			myFont->Draw("Nodes Seen: " + to_string(pCMyPathFinder->GetNodesSeen()), mapTestPos, textSize * 2, kBlack, kCentre);
 			myFont->Draw("Nodes Visited: " + to_string(pCMyPathFinder->GetNodesVisited()), mapTestPos, textSize * 3, kBlack, kCentre);
 			myFont->Draw("Sorts: " + to_string(pCMyPathFinder->GetSorts()), mapTestPos, textSize * 4, kBlack, kCentre);
+			myFont->Draw("Spline:", mapTestPos, textSize * 5, kBlack, kCentre);
+			myFont->Draw(UI_SplineLine1[currentBezierType], mapTestPos, textSize * 6, kBlack, kCentre);
+			myFont->Draw(UI_SplineLine2[currentBezierType], mapTestPos, textSize * 7, kBlack, kCentre);
+
 			if (waypoints.empty())
-				myFont->Draw("No Path Found", mapTestPos, textSize * 5, kBlack, kCentre);
+				myFont->Draw("No Path Found", mapTestPos, textSize * 8, kBlack, kCentre);
 		}
 
 		// keybindings
@@ -336,7 +394,7 @@ void main()
 			}
 
 		}
-			
+
 		if (gpMyEngine->KeyHit(autoStepButton) && !waypoints.empty())
 		{
 			autoStep = !autoStep;
@@ -420,6 +478,13 @@ void main()
 
 			// Reset mob
 			mob->SetPosition(mapStart.first * gCUBE_SIZE, 0.0f, mapStart.second * gCUBE_SIZE);
+		}
+		if (gpMyEngine->KeyHit(splineChangeButton))
+		{
+			if (currentBezierType == EBezeirType::DoubleMid)
+				currentBezierType = EBezeirType::MidThird;
+			else
+				currentBezierType = EBezeirType::DoubleMid;
 		}
 
 		// UI
@@ -545,6 +610,29 @@ pair<float, float> Bezeir(vector<pair<int, int>> &waypoints, int currentPoint, i
 	{
 		ans.second = BezeirFormula(currentSplit / static_cast<float>(splits), waypoints[currentPoint - 2].second, waypoints[currentPoint - 1].second, waypoints[currentPoint].second, waypoints[currentPoint + 1].second);
 		ans.first = BezeirFormula(currentSplit / static_cast<float>(splits), waypoints[currentPoint - 2].first, waypoints[currentPoint - 1].first, waypoints[currentPoint].first, waypoints[currentPoint + 1].first);
+	}
+	return ans;
+}
+
+// get point on a bezeir curve given time [currentSplit / splits]
+pair<float, float> BezeirRev2(vector<pair<int, int>> &waypoints, int currentPoint, int splits, int currentSplit, pair<int, int> mapStart)
+{
+	pair<float, float> ans;
+
+	if (0 == currentPoint)
+	{
+		ans.second = BezeirFormula(currentSplit / static_cast<float>(splits), mapStart.second, waypoints[currentPoint].second, waypoints[currentPoint].second, waypoints[currentPoint + 1].second);
+		ans.first = BezeirFormula(currentSplit / static_cast<float>(splits), mapStart.first, waypoints[currentPoint].first, waypoints[currentPoint].first, waypoints[currentPoint + 1].first);
+	}
+	else if (waypoints.size() - 1 == currentPoint)
+	{
+		ans.second = BezeirFormula(currentSplit / static_cast<float>(splits), waypoints[currentPoint - 1].second, waypoints[currentPoint].second, waypoints[currentPoint].second, waypoints[currentPoint].second);
+		ans.first = BezeirFormula(currentSplit / static_cast<float>(splits), waypoints[currentPoint - 1].first, waypoints[currentPoint].first, waypoints[currentPoint].first, waypoints[currentPoint].first);
+	}
+	else
+	{
+		ans.second = BezeirFormula(currentSplit / static_cast<float>(splits), waypoints[currentPoint - 1].second, waypoints[currentPoint].second, waypoints[currentPoint].second, waypoints[currentPoint + 1].second);
+		ans.first = BezeirFormula(currentSplit / static_cast<float>(splits), waypoints[currentPoint - 1].first, waypoints[currentPoint].first, waypoints[currentPoint].first, waypoints[currentPoint + 1].first);
 	}
 	return ans;
 }
